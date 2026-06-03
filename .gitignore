@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+debug_test.py
+test_phase5.py
+test_technician.py
+manual_test_phase9.py
+manual_test_technician.py

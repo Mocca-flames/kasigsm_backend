@@ -1,0 +1,270 @@
+{
+    "supplier": "GSM Cheap",
+    "services_type": "Tool Rental",
+    "services": [
+        {
+            "title": "@Ready Apple ID Without 2FA \u2013 @Mail New Account - Auto API",
+            "delivery_time": "Miniutes",
+            "price": 2.2,
+            "currency": "USD"
+        },
+        {
+            "title": "AMT - Android Multi Tool Rent [12 Hours]",
+            "delivery_time": "Instant",
+            "price": 0.88,
+            "currency": "USD"
+        },
+    {
+            "title": "AMT - Android Multi Tool Rent [3 Hours]",
+            "delivery_time": "Instant",
+            "price": 0.38,
+            "currency": "USD"
+        },
+        {
+            "title": "AndroidWinTool Rent [ 48 hours ]",
+            "delivery_time": "Instant",
+            "price": 1.38,
+            "currency": "USD"
+        },
+        {
+            "title": "AnonySHU Tool Rent [ 12 Hours ]",
+            "delivery_time": "Instant",
+            "price": 1.95,
+            "currency": "USD"
+        },
+        {
+            "title": "APIZU MDM TOOL PRO Rent { Time: 4 Hours }",
+            "delivery_time": "Miniutes",
+            "price": 1.9,
+            "currency": "USD"
+        },
+        {
+            "title": "CF Tools Rent [ 12 Hours ]",
+            "delivery_time": "Instant",
+            "price": 0.68,
+            "currency": "USD"
+        },
+        {
+            "title": "CHEETAH TOOL RENT [ 25 Days ]",
+            "delivery_time": "Instant",
+            "price": 7.8,
+            "currency": "USD"
+        },
+        {
+            "title": "CM2 Dongle Rent ( New Version ) [ 1 Hour ]",
+            "delivery_time": "1-20 Minutes",
+            "price": 2.6,
+            "currency": "USD"
+        },
+        {
+            "title": "CP- Tools  Rent [ 12 hours]",
+            "delivery_time": "Instant",
+            "price": 1.4,
+            "currency": "USD"
+        },
+        {
+            "title": "DFT Pro Tool Rent [ 48 hours ]",
+            "delivery_time": "Instant",
+            "price": 1.77,
+            "currency": "USD"
+        },
+        {
+            "title": "EFT PRO ( DONGAL RENT ) 60 MINUTES",
+            "delivery_time": "1-10 Miniutes",
+            "price": 1.6,
+            "currency": "USD"
+        },
+        {
+            "title": "Griffin-Unlocker (Premium Account) Tool RENT [ 6 Hours ]",
+            "delivery_time": "Instant",
+            "price": 2.1,
+            "currency": "USD"
+        },
+        {
+            "title": "Griffin-Unlocker Tool Rent [6 Hours]",
+            "delivery_time": "Instant",
+            "price": 1.2,
+            "currency": "USD"
+        },
+        {
+            "title": "Hydra Tool Rent (Without Dongle) [ 24 hours ]",
+            "delivery_time": "Instant",
+            "price": 0.68,
+            "currency": "USD"
+        },
+        {
+            "title": "Kg Killer Tool Rent [ 4 Hours ]",
+            "delivery_time": "Instant",
+            "price": 0.8,
+            "currency": "USD"
+        },
+        {
+            "title": "MDM FIX TOOL RENT [ 6 Hours ]",
+            "delivery_time": "Instant",
+            "price": 1.4,
+            "currency": "USD"
+        },
+        {
+            "title": "MOTO FRP Unlock Remotely XT21 / XT22 / XT23 / XT24 / XT25 & Support All Model",
+            "delivery_time": "5-15 Minutes",
+            "price": 33,
+            "currency": "USD"
+        },
+        {
+            "title": "Mst [ MobileSea Sevice Tool ] [6 hours] Instant",
+            "delivery_time": "Instant",
+            "price": 0.6,
+            "currency": "USD"
+        },
+        {
+            "title": "Octoplus Box - Huawei Tool ( DONGAL RENT ) 60 MINUTES",
+            "delivery_time": "1-10 Miniutes",
+            "price": 2.9,
+            "currency": "USD"
+        },
+        {
+            "title": "Octoplus FRP ( DONGAL RENT ) 60 MINUTES",
+            "delivery_time": "1-10 Miniutes",
+            "price": 2.9,
+            "currency": "USD"
+        },
+        {
+            "title": "Octoplus New Samsung (Dongal RENT) 60 Minutes",
+            "delivery_time": "1-10 Miniutes",
+            "price": 2.5,
+            "currency": "USD"
+        },
+        {
+            "title": "Pandora Tool { Digital } Login ( Rent 48 Hours )",
+            "delivery_time": "1-60 Miniutes",
+            "price": 7.8,
+            "currency": "USD"
+        },
+        {
+            "title": "Pandora Tool { Digital } Login Rent [ 30 days ]",
+            "delivery_time": "5-10 Miniutes",
+            "price": 17,
+            "currency": "USD"
+        },
+        {
+            "title": "Pandora Tool { Digital } Login Rent [ 60 days ]",
+            "delivery_time": "1-30 Miniutes",
+            "price": 21,
+            "currency": "USD"
+        },
+        {
+            "title": "RTC Tool Rent [ 6 Hours ]",
+            "delivery_time": "Instant",
+            "price": 1.45,
+            "currency": "USD"
+        },
+        {
+            "title": "SamsungTool.us Samsung Tool Kg Rent [ 12 Hours ]",
+            "delivery_time": "Instant",
+            "price": 4.8,
+            "currency": "USD"
+        },
+        {
+            "title": "SIGMA PLUS ( DONGLE RENT ) 30-60 MIINUTES",
+            "delivery_time": "1-10 Miniutes",
+            "price": 2.4,
+            "currency": "USD"
+        },
+        {
+            "title": "TFM Tool Pro Rent [6 hours]",
+            "delivery_time": "Instant",
+            "price": 0.63,
+            "currency": "USD"
+        },
+        {
+            "title": "Tojo360  Rent  { Time: 6 Hours }",
+            "delivery_time": "Instant",
+            "price": 1.9,
+            "currency": "USD"
+        },
+        {
+            "title": "TR Tools Pro Rent Instant [24 Hours]",
+            "delivery_time": "Instant",
+            "price": 2.4,
+            "currency": "USD"
+        },
+        {
+            "title": "TSM Tool Rent [ 12 hours ]",
+            "delivery_time": "Instant",
+            "price": 0.53,
+            "currency": "USD"
+        },
+        {
+            "title": "Unlock Tool Rent For [ 12 hours ]",
+            "delivery_time": "Instant",
+            "price": 0.78,
+            "currency": "USD"
+        },
+        {
+            "title": "Unlock Tool Rent For [ 24 hours ]",
+            "delivery_time": "Instant",
+            "price": 1.08,
+            "currency": "USD"
+        },
+        {
+            "title": "Unlock Tool Rent For [ 6 hours ]",
+            "delivery_time": "Instant",
+            "price": 0.48,
+            "currency": "USD"
+        },
+        {
+            "title": "Vivo FRP Unlock Remotely MTK/QUALCOMM & Support All Model",
+            "delivery_time": "5-15 Minutes",
+            "price": 26,
+            "currency": "USD"
+        },
+        {
+            "title": "Z3x SamsTool Digital Tool RENT\u26a1\ufe0f[ 12 Hours ] (No Auto Login)",
+            "delivery_time": "5-10 Miniutes",
+            "price": 7.18,
+            "currency": "USD"
+        },
+        {
+            "title": "Z715 (Filewale.com) Filewale Firmware Request \u2705",
+            "delivery_time": "Miniutes",
+            "price": 1.3,
+            "currency": "USD"
+        },
+        {
+            "title": "Z718 (Givemerom.com) GiveMeROM (2GB to 3GB) Firmware Request \u2705",
+            "delivery_time": "1-3 Hour",
+            "price": 1.4,
+            "currency": "USD"
+        },
+        {
+            "title": "Z718 GivemeROM File Request (5GB to 9GB) Firmware Request",
+            "delivery_time": "3-6 hour",
+            "price": 2.2,
+            "currency": "USD"
+        },
+        {
+            "title": "Z720 (Support.halabtech.com) 2GB To - 3Gb Halabtech Firmware Request \u2705",
+            "delivery_time": "1-3 Hour",
+            "price": 1.6,
+            "currency": "USD"
+        },
+        {
+            "title": "Z720 (Support.halabtech.com) 5GB to 9GB Halabtech Firmware Request \u2705",
+            "delivery_time": "3-6 Hour",
+            "price": 2.8,
+            "currency": "USD"
+        },
+        {
+            "title": "Z721 (All Firmware Site) File Password Only",
+            "delivery_time": "1-30 Minute",
+            "price": 0.5,
+            "currency": "USD"
+        },
+        {
+            "title": "Z882 Samsung FRP Remove Firmware Link Android 14/15 New Maximum Model Support",
+            "delivery_time": "1-10 Miniutes",
+            "price": 3,
+            "currency": "USD"
+        }
+    ]
+}
