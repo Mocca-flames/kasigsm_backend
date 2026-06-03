@@ -8,11 +8,22 @@ from app.models.item import Item, Provider, ProviderListing, ItemType
 from app.models.category import Category
 from app.config import settings
 
+DEFAULT_CURRENCY = "ZAR"
+DEFAULT_PRICE_FALLBACK = Decimal("0")
+DEFAULT_SUPPLIER_URL = "https://gsmcheap.com"
+
+NORMALIZERS = {
+    "GSM Tech Africa": {
+        "currency": "ZAR",
+        "url_trusted": {"https://gsmtechafrica.com"},
+    }
+}
+
 
 def slugify(text: str) -> str:
     text = text.lower()
-    text = re.sub(r'[^a-z0-9-]+', '-', text)
-    return text.strip('-')
+    text = re.sub(r"[^a-z0-9-]+", "-", text)
+    return text.strip("-")
 
 
 def make_uid(session, supplier_name: str, service_type: str) -> str:
@@ -29,6 +40,38 @@ def make_uid(session, supplier_name: str, service_type: str) -> str:
     return f"{prefix}-{num:03d}"
 
 
+def normalize_title(title: str) -> str:
+    if not title:
+        return ""
+    title = title.strip()
+    title = re.sub(r" {2,}", " ", title)
+    return title
+
+
+def normalize_price(raw_price) -> Decimal:
+    if raw_price is None or raw_price == "":
+        return DEFAULT_PRICE_FALLBACK
+    if isinstance(raw_price, (int, float)):
+        try:
+            return Decimal(str(raw_price))
+        except Exception:
+            return DEFAULT_PRICE_FALLBACK
+    text = str(raw_price)
+    text = re.sub(r"[^0-9.]", "", text)
+    if "." in text:
+        parts = text.split(".")
+        text = parts[0] + "." + (parts[1] if len(parts) > 1 else "")
+    try:
+        return Decimal(text) if text else DEFAULT_PRICE_FALLBACK
+    except Exception:
+        return DEFAULT_PRICE_FALLBACK
+
+
+def guess_currency(supplier_name: str) -> str:
+    n = NORMALIZERS.get(supplier_name, {})
+    return n.get("currency", DEFAULT_CURRENCY)
+
+
 def seed_services(file_path: str, provider_name: str = None) -> None:
     session = next(get_session())
 
@@ -38,24 +81,24 @@ def seed_services(file_path: str, provider_name: str = None) -> None:
     services = data.get("services", [])
     default_supplier = data.get("supplier", provider_name or "Unknown")
     default_service_type = data.get("services_type", "Tool Rental")
+    supplier_url = data.get("supplier_url") or DEFAULT_SUPPLIER_URL
+
+    trusted_urls = NORMALIZERS.get(default_supplier, {}).get("url_trusted", set())
 
     provider = session.exec(select(Provider).where(Provider.name == default_supplier)).first()
-    supplier_url = data.get("supplier_url")
-    if not supplier_url:
-        supplier_url = "https://gsmcheap.com"
     if not provider:
         provider = Provider(name=default_supplier, base_url=supplier_url)
         session.add(provider)
         session.commit()
     else:
-        if provider.base_url not in ("https://gsmcheap.com", "https://gsmcheapremote.co.za"):
+        if not provider.base_url or supplier_url in trusted_urls:
             provider.base_url = supplier_url
             session.add(provider)
             session.commit()
 
     category = session.exec(select(Category).where(Category.name == default_service_type)).first()
     if not category:
-        slug = re.sub(r'[^a-z0-9-]+', '-', default_service_type.lower()).strip('-')
+        slug = slugify(default_service_type)
         category = Category(name=default_service_type, slug=slug)
         session.add(category)
         session.commit()
@@ -63,12 +106,16 @@ def seed_services(file_path: str, provider_name: str = None) -> None:
     rate = Decimal(str(settings.USD_TO_ZAR_RATE))
 
     for svc in services:
-        title = svc.get("title")
-        raw_price = Decimal(str(svc.get("price", 0)))
-        currency = svc.get("currency", "USD")
+        title = normalize_title(svc.get("title", ""))
+        raw_price = svc.get("price")
+        currency = svc.get("currency") or guess_currency(default_supplier)
+        normalized_price = normalize_price(raw_price)
         delivery_time = svc.get("delivery_time")
+        if isinstance(delivery_time, str):
+            delivery_time = delivery_time.replace("Miniutes", "Minutes")
+        thumbnail = svc.get("thumbnail")
 
-        cost_price_zar = raw_price * rate if currency == "USD" else raw_price
+        cost_price_zar = normalized_price * rate if currency == "USD" else normalized_price
 
         slug = slugify(title)
 
@@ -77,8 +124,12 @@ def seed_services(file_path: str, provider_name: str = None) -> None:
             item.title = title
             if delivery_time is not None:
                 item.delivery_time = delivery_time
-            if svc.get("thumbnail"):
-                item.thumbnail = svc.get("thumbnail")
+            if thumbnail:
+                item.thumbnail = thumbnail
+            item.currency = currency
+            session.add(item)
+            session.commit()
+            session.refresh(item)
         else:
             uid = make_uid(session, default_supplier, default_service_type)
             item = Item(
@@ -88,9 +139,10 @@ def seed_services(file_path: str, provider_name: str = None) -> None:
                 item_type=ItemType.SERVICE,
                 category=default_service_type,
                 is_visible=True,
-                currency="ZAR",
+                currency=currency,
+                price=normalized_price,
                 delivery_time=delivery_time,
-                thumbnail=svc.get("thumbnail"),
+                thumbnail=thumbnail,
             )
             session.add(item)
             session.commit()

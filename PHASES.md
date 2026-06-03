@@ -21,7 +21,7 @@
 ## Phase 1 — Seed Script + Item Data
 *Goal: Real data in DB, queryable; provider listings populated with UIDs and ZAR prices*
 
-- [x] `scripts/seed_services.py` — simplified JSON schema (`title`, `price`, `currency`, `delivery_time`)
+- [x] `scripts/seed_services.py` — JSON + normalization (`title`, `price`, `currency`, `delivery_time`)
   - Generates `slug` from title server-side
   - Generates `uid` scoped to `PREFIX-SERVICETYPE-###` (e.g. `GSM-TOO-001`, `GSM-REM-001`)
   - Converts USD prices to ZAR using `USD_TO_ZAR_RATE` (hardcoded to 16.5)
@@ -146,22 +146,48 @@
 ## Phase 9 — Category Management & Supplier-Category Markups
 *Goal: Centralised categories and supplier-specific markup overrides*
 
-- [ ] `Category` lookup table + admin API
+- [x] `Category` lookup table + admin API
   - `GET /admin/categories` — list
   - `POST /admin/categories` — create (name + description)
   - `PATCH /admin/categories/{id}` — update name / is_active
   - `DELETE /admin/categories/{id}` — soft-deactivate if no dependent items
-- [ ] `ProviderCategoryMarkup` model + admin API
+- [x] `ProviderCategoryMarkup` model + admin API
   - `GET /admin/providers/{id}/markups` — list overrides
   - `POST /admin/providers/{id}/markups` — upsert override { category, price_markup }
   - `DELETE /admin/providers/{id}/markups/{category}` — remove override
-- [ ] Price resolution service honoring overrides
+- [x] Price resolution service honoring overrides
   - `ProviderCategoryMarkup` > `Item.price_markup` > `0`
-- [ ] Seed script auto-registers categories
-- [ ] `POST/PATCH /admin/items` validates supplied category against `Category.name`; 400 with suggestions if missing
-- [ ] Admin dashboard surfaces `effective_markup` and `markup_source`
+- [x] Seed script auto-registers categories
+- [x] `POST/PATCH /admin/items` validates supplied category against `Category.name`; 400 with suggestions if missing
+- [x] Admin dashboard surfaces `effective_markup` and `markup_source`
 
 **Exit condition:** Admin sets a R15 markup override on Supplier X for Category Y; all items in Category Y from Supplier X price at the override amount.
+
+---
+
+## Phase 10 — Multi-Supplier Seeding & Normalization
+*Goal: Onboard new suppliers without breaking prices or UIDs; keep re-runnable*
+
+- [x] `seed_services.py` normalization layer
+  - `normalize_title()` — strip/collapse whitespace, keep source casing
+  - `normalize_price()` — strip currency symbols/alpha, keep dot, fallback `Decimal("0")`
+  - `guess_currency(supplier_name)` — ZAR for SA suppliers, global fallback `ZAR`
+  - `Miniutes` → `Minutes` typo fix for `delivery_time`
+- [x] Per-supplier `NORMALIZERS` config
+  - GSM Tech Africa: R-prefixed prices, `ZAR`, trusted URL `https://gsmtechafrica.com`
+  - GSM Cheap: numeric USD prices, converted to ZAR via `USD_TO_ZAR_RATE`
+- [x] Supplier URL handling
+  - Fallback `DEFAULT_SUPPLIER_URL = "https://gsmcheap.com"`
+  - Never clobber known-good `Provider.base_url`
+- [x] Imported `gsm_tech_africa_rental.json`
+  - 20 services seeded under GSM Tech Africa
+  - `import_media.py` ran with no source changes
+- [x] DB state
+  - 2 providers (GSM Cheap, GSM Tech Africa)
+  - 273 items across Tool Rental + Remote Services
+  - Processing: GSM Cheap `cost_price` in ZAR; GSM Tech Africa prices preserved
+
+**Exit condition:** New supplier JSON can be dropped into `data/` and re-seeded without data loss or currency regressions; no cross-supplier dedup (Phase 2 deferred).
 
 ---
 

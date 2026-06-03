@@ -76,8 +76,100 @@ def build_item_detail(item: Item, session) -> ItemDetail:
 
 @router.get("/items", response_model=List[ItemDetail])
 def list_all_items(session = Depends(get_session)):
-    items = session.exec(select(Item)).all()
-    return [build_item_detail(item, session) for item in items]
+    items = session.exec(select(Item).where(Item.is_archived == False)).all()
+    if not items:
+        return []
+
+    item_ids = [item.id for item in items]
+
+    listings = session.exec(
+        select(ProviderListing).where(ProviderListing.item_id.in_(item_ids), ProviderListing.is_active == True)
+    ).all()
+
+    preferred_by_item = {}
+    for pl in listings:
+        if pl.provider and pl.provider.is_active:
+            preferred_by_item.setdefault(pl.item_id, []).append(pl)
+
+    provider_ids = {pl.provider_id for pl in listings if pl.provider and pl.provider.is_active}
+    categories = {item.category for item in items}
+    markups = {}
+    if provider_ids and categories:
+        markup_rows = session.exec(
+            select(ProviderCategoryMarkup).where(
+                ProviderCategoryMarkup.provider_id.in_(list(provider_ids)),
+                ProviderCategoryMarkup.category.in_(list(categories)),
+            )
+        ).all()
+        for m in markup_rows:
+            markups[(m.provider_id, m.category)] = m.price_markup
+
+    cred_counts = {}
+    if items:
+        cred_rows = session.exec(
+            select(Credential.item_id, func.count(Credential.id))
+            .where(Credential.item_id.in_(item_ids))
+            .group_by(Credential.item_id)
+        ).all()
+        for item_id, total in cred_rows:
+            cred_counts[item_id] = {"total": total, "used": 0}
+
+    used_rows = session.exec(
+        select(Credential.item_id, func.count(Credential.id))
+        .where(Credential.item_id.in_(item_ids), Credential.is_used == True)
+        .group_by(Credential.item_id)
+    ).all()
+    for item_id, used in used_rows:
+        if item_id in cred_counts:
+            cred_counts[item_id]["used"] = used
+
+    results = []
+    for item in items:
+        pref_list = preferred_by_item.get(item.id, [])
+        preferred = pref_list[0] if pref_list else None
+        markup = item.price_markup
+        markup_source = "item"
+        if preferred and preferred.provider_id and preferred.is_active:
+            override = markups.get((preferred.provider_id, item.category))
+            if override is not None:
+                markup = override
+                markup_source = "provider_category"
+
+        price_final = (preferred.cost_price + markup) if preferred else markup
+
+        cc = cred_counts.get(item.id, {"total": 0, "used": 0})
+        remaining = cc["total"] - cc["used"]
+        low_stock = remaining < 3
+
+        results.append(ItemDetail(
+            id=str(item.id),
+            uid=item.uid,
+            slug=item.slug,
+            title=item.title,
+            description=item.description,
+            item_type=item.item_type,
+            category=item.category,
+            thumbnail=item.thumbnail,
+            media_url=resolve_media_url(item.thumbnail),
+            price_final=price_final,
+            currency=item.currency,
+            delivery_time=item.delivery_time,
+            stock=item.stock,
+            is_visible=item.is_visible,
+            low_stock=low_stock,
+            provider_listings=[
+                {
+                    "provider": listing.provider.name if listing.provider else "",
+                    "cost_price": listing.cost_price,
+                    "currency": item.currency,
+                    "is_preferred": listing.is_preferred,
+                }
+                for listing in pref_list
+            ],
+            effective_markup=markup,
+            markup_source=markup_source,
+        ))
+    return results
 
 
 @router.get("/providers", response_model=list[dict])
@@ -166,9 +258,9 @@ def delete_category(category_id: str, session = Depends(get_session)):
     if dependent:
         raise HTTPException(status_code=400, detail=f"Cannot deactivate category '{category.name}': items still reference it")
     
-    category.is_active = False
+    session.delete(category)
     session.commit()
-    return {"message": f"Category '{category.name}' deactivated"}
+    return {"message": f"Category '{category.name}' deleted"}
 
 
 @router.get("/providers/{provider_id}/markups", response_model=list[dict])

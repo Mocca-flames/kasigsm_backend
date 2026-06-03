@@ -275,18 +275,29 @@ Admin `ItemDetail` responses also expose `effective_markup` and `markup_source` 
 `scripts/seed_services.py`:
 
 - Arguments:
-  - `--file` — path to supplier JSON (minimal schema: `supplier`, `services_type`, `services[title, price, currency, delivery_time]`)
+  - `--file` — path to supplier JSON (minimal schema: `supplier`, `services_type`, `supplier_url` (optional), `services[title, price, currency, delivery_time, thumbnail]`)
   - `--provider` — override supplier name (optional)
+- Normalization before DB writes:
+  - `DEFAULT_CURRENCY = "ZAR"`
+  - `DEFAULT_PRICE_FALLBACK = Decimal("0")`
+  - `DEFAULT_SUPPLIER_URL = "https://gsmcheap.com"`
+  - `NORMALIZERS` dict keyed by supplier name for per-supplier `currency` + trusted `base_url`
+  - `normalize_price()` strips non-numeric chars, preserves decimal
+  - `guess_currency()` returns ZAR for SA suppliers, else default
+  - `normalize_title()` trims/collapses whitespace
+  - `delivery_time`: `Miniutes` → `Minutes`
 - For every service:
-  1. Upsert `Item` by `slug` (auto-generated from title). Create-only: same title = same Item.
+  1. Upsert `Item` by `slug` (normalized title → slug). Same normalized title = same Item.
   2. Generate `uid` scoped to `PREFIX-SERVICETYPE-###` (e.g. `GSM-TOO-001`).
   3. Upsert `ProviderListing` for the provider; first listing per item is `is_preferred = true`.
   4. Convert USD to ZAR using `USD_TO_ZAR_RATE`; store in `cost_price`.
+  5. Never overwrite a known-good `Provider.base_url` with a stale JSON value.
 
 Run per supplier JSON:
 ```
 python scripts/seed_services.py --file data/gsm_cheap.json
-python scripts/seed_services.py --file data/gsm_cheap_remote.json
+python scripts/seed_services.py --file gsm_tech_africa_rental.json
+python scripts/import_media.py
 ```
 
 ---
