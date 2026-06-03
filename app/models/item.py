@@ -43,6 +43,7 @@ class Provider(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str = Field(sa_type=String, unique=True, nullable=False)
     base_url: Optional[str] = Field(sa_type=String, default=None)
+    logo_url: Optional[str] = Field(sa_type=String, default=None)
     notes: Optional[str] = Field(sa_type=Text, default=None)
     is_active: bool = Field(default=True)
     created_at: datetime = Field(

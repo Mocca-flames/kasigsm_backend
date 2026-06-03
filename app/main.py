@@ -1,8 +1,10 @@
 from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from app.utils.security import get_current_user, require_admin
 from app.routers import public, auth, admin, client, payments, search, technician
+from app.config import settings
 
 app = FastAPI(title="KasI GSM API", version="0.1.0")
 
@@ -13,6 +15,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.mount("/media", StaticFiles(directory=settings.MEDIA_ROOT), name="media")
 
 app.include_router(public.router)
 app.include_router(auth.router, prefix="/auth")

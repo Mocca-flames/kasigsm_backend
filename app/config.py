@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
     USD_TO_ZAR_RATE: float = 16.5
+    MEDIA_ROOT: str = "media"
+    MEDIA_PUBLIC_URL: str = "/media"
+    ALLOWED_EXTENSIONS: set[str] = {"png", "jpg", "jpeg", "webp", "gif"}
+    MAX_UPLOAD_BYTES: int = 5 * 1024 * 1024
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

@@ -1,0 +1,107 @@
+{
+    "supplier": "GSM Tech Africa",
+    "services_type": "Tool Rental",
+    "supplier_url": "https://gsmtechafrica.com",
+    "services": [
+        {
+            "title": "\u26a0\ufe0fTool Login Issues Report",
+            "delivery_time": "1-30 Miniutes",
+            "price": "R0"
+        },
+        {
+            "title": "Xiaomi FRP Unlock BY USB Redirector (Mi Assistant Mode)\u2705\ufe0f",
+            "delivery_time": "1-10 Miniutes",
+            "price": "R85"
+        },
+        {
+            "title": "\u2666\ufe0f Samsung Tool Access Rent For 12 Hours - with 10 credit Account \u2666\ufe0f",
+            "delivery_time": "Instant",
+            "price": "R200"
+        },
+        {
+            "title": "\u2666\ufe0f Samsung Tool Access Rent For 12 Hours [Server 1] \u2666\ufe0f",
+            "delivery_time": "Instant",
+            "price": "R30"
+        },
+        {
+            "title": "\u2666\ufe0f Sigma Plus Dongle - Rent For 2 Hours \u2666\ufe0f",
+            "delivery_time": "10-20 Miniutes",
+            "price": "R80"
+        },
+        {
+            "title": "\u2666\ufe0f Sigma Plus Dongle - Rent For 1 Hours \u2666\ufe0f",
+            "delivery_time": "1-30 Miniutes",
+            "price": "R50"
+        },
+        {
+            "title": "\u2666\ufe0f UnlockTool Access Rent For 6 Hours [Server 1] \u2666\ufe0f",
+            "delivery_time": "Instant",
+            "price": "R10"
+        },
+        {
+            "title": "\u2b50\ufe0fUnlockTool Access Rent For 6 Hours [Server 2]\u2705\ufe0f",
+            "delivery_time": "Instant",
+            "price": "R20"
+        },
+        {
+            "title": "\u2666\ufe0fTsm-Tool Pro Access Rent For 3 Hours [Server 1] \u2666\ufe0f",
+            "delivery_time": "Instant",
+            "price": "R15"
+        },
+        {
+            "title": "\u2b50\ufe0fTSM Tool Access Rent For 3 Hours [Server 2]\u2705\ufe0f",
+            "delivery_time": "Instant",
+            "price": "R25"
+        },
+        {
+            "title": "\u2b50\ufe0fTojo 360 Tool Access Rent For 12 Hours (Instant Auto 24/7)\u2705\ufe0f",
+            "delivery_time": "Instant",
+            "price": "R35"
+        },
+        {
+            "title": "\u2b50\ufe0fTFM Tool Pro Access Rent For 6 Hours (Direct Source)",
+            "delivery_time": "Instant",
+            "price": "R25"
+        },
+        {
+            "title": "\u2b50\ufe0fAndroidWinTool (AWT) Access Rent For 48 Hours (Direct Source)",
+            "delivery_time": "Instant",
+            "price": "R40"
+        },
+        {
+            "title": "\u2666\ufe0f Android Multi Tool (AMT) Access Rent For 4 Hours [Server 1] \u2666\ufe0f",
+            "delivery_time": "Instant",
+            "price": "R20"
+        },
+        {
+            "title": "\u2b50\ufe0fAndroid Multi Tool (AMT) Access Rent For 4 Hours [Server 2]",
+            "delivery_time": "Instant",
+            "price": "R25"
+        },
+        {
+            "title": "MDMFix Tool Access Rent For 6 Hours (Source 2)",
+            "delivery_time": "Miniutes",
+            "price": "R50"
+        },
+        {
+            "title": "\u2666\ufe0f MDM FIX TOOL Access Rent For 6 Hours (Gsm Source) \u2666\ufe0f",
+            "delivery_time": "Instant",
+            "price": "R20"
+        },
+        {
+            "title": "\u2b50\ufe0fMDMFix Tool Access Rent For 6 Hours (Direct Source)",
+            "delivery_time": "Instant",
+            "price": "R40"
+        },
+        {
+            "title": "\u2b50\ufe0fDFT Pro Tool Access Rent For 48 Hours (Direct Source)",
+            "delivery_time": "Instant",
+            "price": "R40"
+        },
+        {
+            "title": "\u2b50\ufe0fGriffin-Unlocker With Premium Pack Access Rent For 6 Hours [Server 2]\u2705\ufe0f",
+            "delivery_time": "Instant",
+            "price": "R40"
+        }
+    ]
+}

@@ -24,7 +24,8 @@ class ItemPublic(BaseModel):
     description: Optional[str]
     item_type: ItemType
     category: str
-    thumbnail: Optional[str]
+    thumbnail: Optional[str] = None
+    media_url: Optional[str] = None
     price_final: Decimal
     currency: str
     delivery_time: Optional[str]
@@ -39,7 +40,8 @@ class ItemDetail(BaseModel):
     description: Optional[str]
     item_type: ItemType
     category: str
-    thumbnail: Optional[str]
+    thumbnail: Optional[str] = None
+    media_url: Optional[str] = None
     price_final: Decimal
     currency: str
     delivery_time: Optional[str]

@@ -1,6 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Path, UploadFile, File
 from typing import List, Optional
 from decimal import Decimal
+import shutil
+import uuid
+import os
 from sqlmodel import select, func
 import json
 import csv
@@ -21,12 +24,14 @@ from app.schemas.technician import TechnicianResponse, TechnicianReview
 from app.services.pricing import get_price_detail
 from app.utils.encryption import encrypt_payload
 from app.utils.security import require_admin, get_current_user
+from app.utils.media import resolve_media_url
 
 router = APIRouter()
 
 
 def build_item_detail(item: Item, session) -> ItemDetail:
     detail = get_price_detail(item, session)
+    media_url = resolve_media_url(item.thumbnail)
 
     low_stock = False
     if item.item_type == ItemType.SERVICE:
@@ -48,6 +53,7 @@ def build_item_detail(item: Item, session) -> ItemDetail:
         item_type=item.item_type,
         category=item.category,
         thumbnail=item.thumbnail,
+        media_url=media_url,
         price_final=detail["price_final"],
         currency=item.currency,
         delivery_time=item.delivery_time,
@@ -234,17 +240,93 @@ def delete_provider_markup(provider_id: str, category: str, session = Depends(ge
     session.delete(markup)
     session.commit()
     return {"message": f"Markup for category '{category}' removed"}
-    providers = session.exec(select(Provider)).all()
-    return [
-        {
-            "id": str(p.id),
-            "name": p.name,
-            "is_active": p.is_active,
-            "base_url": p.base_url,
-            "notes": p.notes,
-        }
-        for p in providers
-    ]
+
+
+SUPPORTED_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "gif"}
+
+
+def _sanitize_filename(filename: str) -> str:
+    base, ext = os.path.splitext(filename)
+    ext = ext.lower().strip(".")
+    base = base.replace(" ", "-")
+    return f"{uuid.uuid4().hex}.{ext}"
+
+
+def _safe_local_path(filename: str) -> str:
+    dest = os.path.join(settings.MEDIA_ROOT, filename)
+    if not dest.startswith(os.path.abspath(settings.MEDIA_ROOT)):
+        raise ValueError("Invalid target path")
+    return dest
+
+
+def _save_upload(upload_file: UploadFile) -> str:
+    upload_file.file.seek(0, os.SEEK_END)
+    size = upload_file.file.tell()
+    upload_file.file.seek(0)
+    if size > settings.MAX_UPLOAD_BYTES:
+        raise ValueError("File too large")
+    ext = upload_file.filename.split(".")[-1].lower().strip()
+    if ext not in settings.ALLOWED_EXTENSIONS:
+        raise ValueError("Unsupported file type")
+    safe_name = _sanitize_filename(upload_file.filename)
+    dest = _safe_local_path(safe_name)
+    with open(dest, "wb") as buffer:
+        shutil.copyfileobj(upload_file.file, buffer)
+    return f"{settings.MEDIA_PUBLIC_URL}/{safe_name}"
+
+
+@router.post("/upload", response_model=dict)
+def upload_media(file: UploadFile = File(...)):
+    try:
+        url = _save_upload(file)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    finally:
+        file.file.close()
+    return {"url": url}
+
+
+@router.patch("/providers/{provider_id}/logo", response_model=dict)
+def update_provider_logo(provider_id: str, logo_url: Optional[str] = None, file: UploadFile = File(None), session = Depends(get_session)):
+    provider = session.exec(select(Provider).where(Provider.id == provider_id)).first()
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+    if file is not None:
+        try:
+            provider.logo_url = _save_upload(file)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        finally:
+            file.file.close()
+    elif logo_url is not None:
+        provider.logo_url = logo_url
+    else:
+        raise HTTPException(status_code=400, detail="Provide either file or logo_url")
+    session.commit()
+    session.refresh(provider)
+    return {"id": str(provider.id), "logo_url": provider.logo_url}
+
+
+@router.patch("/items/{item_id}/thumbnail", response_model=dict)
+def update_item_thumbnail(item_id: str, thumbnail_url: Optional[str] = None, file: UploadFile = File(None), session = Depends(get_session)):
+    item = session.exec(select(Item).where(Item.id == item_id)).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    if file is not None:
+        try:
+            item.thumbnail = _save_upload(file)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        finally:
+            file.file.close()
+    elif thumbnail_url is not None:
+        item.thumbnail = thumbnail_url
+    else:
+        raise HTTPException(status_code=400, detail="Provide either file or thumbnail_url")
+    session.add(item)
+    session.commit()
+    session.refresh(item)
+    return {"id": str(item.id), "thumbnail": item.thumbnail, "media_url": resolve_media_url(item.thumbnail)}
 
 
 @router.patch("/providers/{provider_id}", response_model=dict)

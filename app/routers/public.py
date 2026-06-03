@@ -8,6 +8,7 @@ from app.database import get_session
 from app.models.item import Item, ItemType, Provider, ProviderListing
 from app.schemas.item import ItemPublic, ItemDetail
 from app.services.pricing import get_price_final
+from app.utils.media import resolve_media_url
 
 router = APIRouter()
 
@@ -49,6 +50,7 @@ def list_items(
             item_type=item.item_type,
             category=item.category,
             thumbnail=item.thumbnail,
+            media_url=resolve_media_url(item.thumbnail),
             price_final=price_final,
             currency=item.currency,
             delivery_time=item.delivery_time,
@@ -65,6 +67,15 @@ def get_item(slug: str, session = Depends(get_session)):
     
     price_final = get_price_final(item, session)
     active_listings = [pl for pl in item.provider_listings if pl.is_active and pl.provider and pl.provider.is_active]
+    thumbnail_url = item.thumbnail or ""
+    media_url = None
+    if thumbnail_url:
+        if thumbnail_url.startswith("http"):
+            media_url = thumbnail_url
+        elif thumbnail_url.startswith("/"):
+            media_url = thumbnail_url
+        else:
+            media_url = f"{settings.MEDIA_PUBLIC_URL}/{thumbnail_url.lstrip('/')}"
     
     return ItemDetail(
         id=str(item.id),
@@ -75,6 +86,7 @@ def get_item(slug: str, session = Depends(get_session)):
         item_type=item.item_type,
         category=item.category,
         thumbnail=item.thumbnail,
+        media_url=media_url,
         price_final=price_final,
         currency=item.currency,
         delivery_time=item.delivery_time,

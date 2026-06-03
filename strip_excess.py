@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+supplier_url = "https://gsmcheap.com/"
+
 def strip_excess(input_file, output_file):
     with open(input_file, 'r',encoding="utf-8") as f:
         data = json.load(f)
@@ -11,11 +13,13 @@ def strip_excess(input_file, output_file):
             'title': service.get('title'),
             'delivery_time': service.get('delivery_time'),
             'price': service.get('price'),
-            'currency': service.get('currency')
+            
+            
         })
     data_file = {
         'supplier': data.get('supplier'),
-        'services_type': data.get('service_type'),
+        'services_type': data.get('services_type'),
+        'supplier_url': supplier_url,
         'services': stripped_data
     }
 
@@ -24,5 +28,5 @@ def strip_excess(input_file, output_file):
 
 if __name__ == "__main__":
     input_file = Path('services.json')
-    output_file = Path('gsm_cheap_remote.json')
+    output_file = Path('gsm_tech_africa_rental.json')
     strip_excess(input_file, output_file)

@@ -40,10 +40,18 @@ def seed_services(file_path: str, provider_name: str = None) -> None:
     default_service_type = data.get("services_type", "Tool Rental")
 
     provider = session.exec(select(Provider).where(Provider.name == default_supplier)).first()
+    supplier_url = data.get("supplier_url")
+    if not supplier_url:
+        supplier_url = "https://gsmcheap.com"
     if not provider:
-        provider = Provider(name=default_supplier)
+        provider = Provider(name=default_supplier, base_url=supplier_url)
         session.add(provider)
         session.commit()
+    else:
+        if provider.base_url not in ("https://gsmcheap.com", "https://gsmcheapremote.co.za"):
+            provider.base_url = supplier_url
+            session.add(provider)
+            session.commit()
 
     category = session.exec(select(Category).where(Category.name == default_service_type)).first()
     if not category:
@@ -69,6 +77,8 @@ def seed_services(file_path: str, provider_name: str = None) -> None:
             item.title = title
             if delivery_time is not None:
                 item.delivery_time = delivery_time
+            if svc.get("thumbnail"):
+                item.thumbnail = svc.get("thumbnail")
         else:
             uid = make_uid(session, default_supplier, default_service_type)
             item = Item(
@@ -80,6 +90,7 @@ def seed_services(file_path: str, provider_name: str = None) -> None:
                 is_visible=True,
                 currency="ZAR",
                 delivery_time=delivery_time,
+                thumbnail=svc.get("thumbnail"),
             )
             session.add(item)
             session.commit()
