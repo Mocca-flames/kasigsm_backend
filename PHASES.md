@@ -44,10 +44,14 @@
   - Hides supplier names from client responses
 - [x] `GET /items/{slug}` — single item detail with active supplier listings
 - [x] `POST /auth/register` — hash password, create CLIENT user
+  - Sends OTP email via Brevo SMTP
 - [x] `POST /auth/login` — verify, return signed JWT
 - [x] `POST /search/validate` — validate search queries with category alias resolution
 - [x] JWT decode middleware / dependency (`get_current_user`)
 - [x] Role guard dependency (`require_admin`)
+- [x] OTP email on register + resend + verify (Brevo SMTP)
+- [x] Registration anti-spam: OTP rate-limited (3 per IP per 15 min)
+- [x] Login brute-force protection: 5 failures = 15 min lockout
 
 **Exit condition:** Swagger UI at `/docs` shows all routes; register + login + browse working.
 
@@ -193,11 +197,8 @@
 
 ## Post-MVP (not in scope now)
 
-- Email notifications on order PAID / credential delivered
 - Wallet System for fast Orders
-- SMS OTP on registration
 - Bulk markup — apply markup % across a category
 - Discount / promo codes
 - Audit log for admin actions
-- Rate limiting + brute-force protection on auth
 

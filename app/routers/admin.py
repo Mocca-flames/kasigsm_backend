@@ -11,7 +11,7 @@ import io
 import re
 from datetime import datetime, timezone
 from app.database import get_session
-from app.models.item import Item, ItemType, Provider
+from app.models.item import Item, ItemType, Provider, ProviderListing
 from app.models.user import User, UserRole
 from app.models.technician import Technician, TechnicianStatus
 from app.models.order import Order, OrderStatus

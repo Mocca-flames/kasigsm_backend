@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 def _build_message(to_email: str, subject: str, body: str, html_body: str | None = None) -> MIMEMultipart:
     msg = MIMEMultipart("alternative")
-    msg["From"] = f"{settings.BREVO_SENDER_NAME} <{settings.BREVO_SENDER_EMAIL}>"
+    msg["From"] = f"{settings.brevo_sender_name} <{settings.brevo_sender_email}>"
     msg["To"] = to_email
     msg["Subject"] = subject
     msg.attach(MIMEText(body, "plain"))
@@ -20,10 +20,10 @@ def _build_message(to_email: str, subject: str, body: str, html_body: str | None
 def _send_via_smtp(msg: MIMEMultipart) -> bool:
     import smtplib
 
-    host = settings.BREVO_SMTP_HOST
-    port = settings.BREVO_SMTP_PORT
-    username = settings.BREVO_SMTP_USER
-    password = settings.BREVO_SMTP_PASSWORD
+    host = settings.brevo_smtp_host
+    port = settings.brevo_smtp_port
+    username = settings.brevo_smtp_user
+    password = settings.brevo_smtp_password
 
     if not host or not port:
         logger.error("Brevo SMTP not configured: host/port missing")
@@ -59,14 +59,14 @@ def send_otp_email(to_email: str, code: str) -> bool:
         "This code expires in 10 minutes.\n\n"
         "If you didn't create an account, you can ignore this email.\n\n"
         f"Best regards,\n"
-        f"{settings.BREVO_SENDER_NAME}\n"
+        f"{settings.brevo_sender_name}\n"
     )
     html_body = (
         f"<p>Your <strong>KasI GSM</strong> verification code is:</p>"
         f"<p style=\"font-size: 24px; font-weight: bold; letter-spacing: 2px;\">{code}</p>"
         f"<p>This code expires in <strong>10 minutes</strong>.</p>"
         f"<p>If you didn't create an account, you can ignore this email.</p>"
-        f"<p>— {settings.BREVO_SENDER_NAME}</p>"
+        f"<p>— {settings.brevo_sender_name}</p>"
     )
     return send_email(to_email, subject, body, html_body)
 
@@ -80,14 +80,14 @@ def send_welcome_email(to_email: str, name: str | None = None) -> bool:
         "You can now browse our services and place orders directly from the portal.\n\n"
         "If you need assistance, reply to this message or contact support.\n\n"
         "Best regards,\n"
-        f"{settings.BREVO_SENDER_NAME}\n"
+        f"{settings.brevo_sender_name}\n"
     )
     html_body = (
         f"<p>{greeting}</p>"
         f"<p>Welcome to <strong>KasI GSM</strong>. Your account is now ready.</p>"
         f"<p>You can browse services and place orders from your client portal.</p>"
-        f"<p>Need help? Contact {settings.BREVO_SENDER_NAME} support.</p>"
-        f"<p>— {settings.BREVO_SENDER_NAME}</p>"
+        f"<p>Need help? Contact {settings.brevo_sender_name} support.</p>"
+        f"<p>— {settings.brevo_sender_name}</p>"
     )
     return send_email(to_email, subject, body, html_body)
 
@@ -99,13 +99,13 @@ def send_order_paid_email(to_email: str, order_id: str, total: float, currency: 
         f"Total: {currency} {total:,.2f}\n"
         f"Items: {items_count}\n\n"
         "We are preparing your order. You will receive another email when your credentials are ready.\n\n"
-        f"Thanks for choosing {settings.BREVO_SENDER_NAME}.\n"
+        f"Thanks for choosing {settings.brevo_sender_name}.\n"
     )
     html_body = (
         f"<p>Order <strong>#{order_id}</strong> confirmed.</p>"
         f"<p>Total: <strong>{currency} {total:,.2f}</strong> ({items_count} item(s))</p>"
         f"<p>We are preparing your order and will notify you when it is ready.</p>"
-        f"<p>— {settings.BREVO_SENDER_NAME}</p>"
+        f"<p>— {settings.brevo_sender_name}</p>"
     )
     return send_email(to_email, subject, body, html_body)
 
@@ -117,12 +117,12 @@ def send_credential_ready_email(to_email: str, order_id: str, credential_preview
         f"Your credentials for order #{order_id} are ready.\n\n"
         f"{preview_line}"
         "Log in to the Client Portal, go to Orders, and open your order to view the full credentials.\n\n"
-        f"If you have any issues, contact {settings.BREVO_SENDER_NAME} support.\n"
+        f"If you have any issues, contact {settings.brevo_sender_name} support.\n"
     )
     html_body = (
         f"<p>Your credentials for order <strong>#{order_id}</strong> are ready.</p>"
         f"<p>Log in to the Client Portal and open your order to view them.</p>"
-        f"<p>Need help? Contact {settings.BREVO_SENDER_NAME} support.</p>"
-        f"<p>— {settings.BREVO_SENDER_NAME}</p>"
+        f"<p>Need help? Contact {settings.brevo_sender_name} support.</p>"
+        f"<p>— {settings.brevo_sender_name}</p>"
     )
     return send_email(to_email, subject, body, html_body)

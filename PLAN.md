@@ -315,6 +315,12 @@ OZOW_SITE_CODE
 OZOW_PRIVATE_KEY
 ENCRYPTION_KEY
 USD_TO_ZAR_RATE=16.5
+BREVO_SMTP_HOST
+BREVO_SMTP_PORT
+BREVO_SMTP_USER
+BREVO_SMTP_PASSWORD
+BREVO_SENDER_EMAIL
+BREVO_SENDER_NAME
 ```
 
 ---
@@ -380,5 +386,4 @@ Supports category alias resolution (e.g. `remote` → `Remote Services`, `tool` 
 
 - Subscription / recurring billing
 - Discount codes
-- Email notifications (add post-MVP with background tasks)
-- SMS OTP (add post-MVP)
+- Email notifications done (Brevo SMTP — OTP, welcome, order PAID, credential ready)

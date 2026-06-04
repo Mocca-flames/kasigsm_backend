@@ -74,7 +74,7 @@ def resend_otp(email: str, request: Request, session = Depends(get_session)):
 
 
 @router.post("/login", response_model=Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), request: Request, session = Depends(get_session)):
+def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), session = Depends(get_session)):
     rate_limit_auth(request)
     login_key = login_throttle(request)
     

@@ -25,6 +25,12 @@ class Settings(BaseSettings):
     CORS_ALLOW_NGROK: bool = True
     CORS_NGROK_PATTERNS: list[str] = []
     MAX_UPLOAD_BYTES: int = 5 * 1024 * 1024
+    brevo_smtp_host: str = "smtp-relay.brevo.com"
+    brevo_smtp_port: int = 587
+    brevo_smtp_user: str = ""
+    brevo_smtp_password: str = ""
+    brevo_sender_email: str = "noreply@yourdomain.com"
+    brevo_sender_name: str = "KasI GSM"
 
     def get_cors_origins(self) -> list[str]:
         if self.CORS_ALLOW_ALL or self.CORS_ALLOW_NGROK:
