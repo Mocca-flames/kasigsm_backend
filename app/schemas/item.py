@@ -79,6 +79,11 @@ class ItemEdit(BaseModel):
     uid: Optional[str] = None
 
 
+class OTPVerify(BaseModel):
+    email: str
+    code: str
+
+
 class UserRegister(BaseModel):
     email: str
     password: str

@@ -12,15 +12,31 @@ class Settings(BaseSettings):
     PAYSTACK_CALLBACK_URL: str = "http://localhost:3000/payment/callback"
     PAYFAST_MERCHANT_ID: str = ""
     PAYFAST_MERCHANT_KEY: str = ""
-    SMTP_HOST: str = "localhost"
-    SMTP_PORT: int = 1025
-    SMTP_USER: str = ""
-    SMTP_PASSWORD: str = ""
     USD_TO_ZAR_RATE: float = 16.5
     MEDIA_ROOT: str = "media"
     MEDIA_PUBLIC_URL: str = "/media"
     ALLOWED_EXTENSIONS: set[str] = {"png", "jpg", "jpeg", "webp", "gif"}
+    CORS_ALLOW_ALL: bool = False
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost:5174",
+    ]
+    CORS_ALLOW_NGROK: bool = True
+    CORS_NGROK_PATTERNS: list[str] = []
     MAX_UPLOAD_BYTES: int = 5 * 1024 * 1024
+
+    def get_cors_origins(self) -> list[str]:
+        if self.CORS_ALLOW_ALL or self.CORS_ALLOW_NGROK:
+            return ["*"]
+        return list(self.CORS_ORIGINS)
+
+    # Rate limiting defaults
+    AUTH_RATE_LIMIT: int = 5
+    OTP_RATE_LIMIT: int = 3
+    RATE_WINDOW_SECONDS: int = 900
+    LOGIN_LOCKOUT_AFTER: int = 5
+    LOGIN_LOCKOUT_SECONDS: int = 900
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

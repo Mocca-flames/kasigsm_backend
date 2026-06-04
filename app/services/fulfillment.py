@@ -4,9 +4,11 @@ from datetime import datetime
 from app.database import get_session
 from app.models.credential import Credential
 from app.models.item import Item
+from app.utils.email import send_credential_ready_email
 
 
 def fulfill_service_order(order, session):
+    assigned = False
     for oi in order.items:
         item = session.exec(select(Item).where(Item.id == oi.item_id)).first()
         if not item or item.item_type.value != "SERVICE":
@@ -25,6 +27,9 @@ def fulfill_service_order(order, session):
             cred.order_item_id = oi.id
             cred.assigned_at = datetime.utcnow()
             session.commit()
+            assigned = True
+    
+    return assigned
 
 
 def fulfill_product_order(order, session):
@@ -39,5 +44,6 @@ def fulfill_product_order(order, session):
 
 
 def fulfill_order(order, session):
-    fulfill_service_order(order, session)
+    service_assigned = fulfill_service_order(order, session)
     fulfill_product_order(order, session)
+    return service_assigned
