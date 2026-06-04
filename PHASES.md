@@ -197,8 +197,18 @@
 
 ## Post-MVP (not in scope now)
 
-- Wallet System for fast Orders
-- Bulk markup — apply markup % across a category
+- [x] Bulk markup — apply markup % across a category
+  - Admin endpoints: `POST /admin/categories/{category_name}/markup/bulk` and `POST /admin/categories/{category_name}/markup/bulk-percentage`
+  - Supports flat ZAR and percentage-of-cost-price modes
+  - Updates all non-archived items in the specified category
+
+- [x] Wallet System for fast Orders
+  - Wallet model, client_ref (1-letter + 5-digit), auto-created on registration
+  - WalletTopUp (EFT/admin) + WalletTransaction audit trail
+  - Client endpoints: balance, transactions, top-up request, pay order (/wallet/me, /wallet/top-up, /wallet/transactions, /wallet/pay)
+  - Admin endpoints: review top-ups, manual credit, list wallets (/admin/wallet/top-ups, /admin/wallet/{id}/credit, /admin/wallet/all)
+  - .env configurable top-up limits, expiry, low-balance threshold
+  - Brevo notifications: top-up approved, low balance
 - Discount / promo codes
 - Audit log for admin actions
 

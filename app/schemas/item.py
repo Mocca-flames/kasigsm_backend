@@ -84,6 +84,30 @@ class OTPVerify(BaseModel):
     code: str
 
 
+class CategoryMarkup(BaseModel):
+    category: str
+    price_markup: Decimal
+
+
+class CategoryMarkupUpdate(BaseModel):
+    category: str
+    percentage: Decimal
+
+
+class BulkMarkupResponse(BaseModel):
+    message: str
+    category: str
+    markup_type: Literal["flat", "percentage"]
+    items_updated: int
+    updated_items: list[dict]
+
+
+class CategoryMarkupDetail(BaseModel):
+    id: str
+    category: str
+    price_markup: Decimal
+
+
 class UserRegister(BaseModel):
     email: str
     password: str

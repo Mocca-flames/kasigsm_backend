@@ -10,8 +10,8 @@ from app.models.user import User
 from app.schemas.payment import PaymentInitiate, PaymentVerify
 from app.config import settings
 from app.utils.security import get_current_user
-from app.services.fulfillment import fulfill_order
-from app.services.email import send_order_paid_email, send_credential_ready_email
+
+from app.services.email import send_order_paid_email
 
 router = APIRouter()
 
@@ -110,10 +110,6 @@ def verify_payment(payment_in: PaymentVerify, session = Depends(get_session)):
     user = session.exec(select(User).where(User.id == order.user_id)).first()
     if user:
         send_order_paid_email(user.email, str(order.id), float(order.total_amount), order.currency, len(order.items))
-    service_assigned = fulfill_order(order, session)
-    if service_assigned and user:
-        credential_preview = "credentials assigned"
-        send_credential_ready_email(user.email, str(order.id), credential_preview)
     
     return {"status": "success", "order_id": str(order.id)}
 
@@ -160,9 +156,5 @@ def verify_payment_get(reference: str, session = Depends(get_session)):
     user = session.exec(select(User).where(User.id == order.user_id)).first()
     if user:
         send_order_paid_email(user.email, str(order.id), float(order.total_amount), order.currency, len(order.items))
-    service_assigned = fulfill_order(order, session)
-    if service_assigned and user:
-        credential_preview = "credentials assigned"
-        send_credential_ready_email(user.email, str(order.id), credential_preview)
     
     return {"status": "success", "order_id": str(order.id)}

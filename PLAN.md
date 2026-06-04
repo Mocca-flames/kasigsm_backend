@@ -386,4 +386,4 @@ Supports category alias resolution (e.g. `remote` → `Remote Services`, `tool` 
 
 - Subscription / recurring billing
 - Discount codes
-- Email notifications done (Brevo SMTP — OTP, welcome, order PAID, credential ready)
+- Wallet System done (Brevo SMTP — OTP, welcome, order PAID, credential ready)

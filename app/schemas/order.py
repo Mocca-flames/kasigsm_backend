@@ -1,6 +1,15 @@
-from typing import Optional, List
+from typing import Optional, List, Dict
 from pydantic import BaseModel
 from decimal import Decimal
+
+
+class CredentialAssignment(BaseModel):
+    order_item_id: str
+    payload: str
+
+
+class OrderFulfill(BaseModel):
+    credentials: List[CredentialAssignment]
 
 
 class OrderItemCreate(BaseModel):
@@ -33,3 +42,16 @@ class OrderPublic(BaseModel):
     currency: str
     created_at: str
     items: list[OrderItemPublic]
+
+
+class StatsSummaryResponse(BaseModel):
+    period_days: int
+    total_orders: int
+    orders_by_status: Dict[str, int]
+    total_revenue: Decimal
+    total_clients: int
+    total_items: int
+    low_stock_items: int
+    fulfilled_orders: int
+    pending_fulfillment: int
+    refunded_orders: int

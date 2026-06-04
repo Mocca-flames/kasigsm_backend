@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, Path, UploadFile, File
-from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Path, UploadFile, File, Query
+from typing import List, Optional, Dict
 from decimal import Decimal
 import shutil
 import uuid
@@ -9,18 +9,21 @@ import json
 import csv
 import io
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+from pydantic import BaseModel
 from app.database import get_session
 from app.models.item import Item, ItemType, Provider, ProviderListing
 from app.models.user import User, UserRole
 from app.models.technician import Technician, TechnicianStatus
-from app.models.order import Order, OrderStatus
+from app.models.order import Order, OrderStatus, OrderItem
 from app.models.credential import Credential
+from app.models.wallet import Wallet
 from app.models.banner import Banner
 from app.models.category import Category, ProviderCategoryMarkup
-from app.schemas.item import ItemDetail, ItemCreate, ItemEdit
+from app.schemas.item import ItemDetail, ItemCreate, ItemEdit, BulkMarkupResponse
 from app.schemas.banner import BannerCreate, BannerEdit, BannerPublic
 from app.schemas.technician import TechnicianResponse, TechnicianReview
+from app.schemas.order import OrderFulfill, StatsSummaryResponse
 from app.services.pricing import get_price_detail
 from app.utils.encryption import encrypt_payload
 from app.utils.security import require_admin, get_current_user
@@ -332,6 +335,99 @@ def delete_provider_markup(provider_id: str, category: str, session = Depends(ge
     session.delete(markup)
     session.commit()
     return {"message": f"Markup for category '{category}' removed"}
+
+
+@router.post("/categories/{category_name}/markup/bulk", response_model=BulkMarkupResponse)
+def bulk_category_markup(
+    category_name: str,
+    markup: Decimal,
+    session = Depends(get_session),
+    admin = Depends(require_admin)
+):
+    category = session.exec(select(Category).where(Category.name == category_name)).first()
+    if not category:
+        raise HTTPException(status_code=404, detail=f"Category '{category_name}' not found")
+    
+    items = session.exec(
+        select(Item).where(Item.category == category_name, Item.is_archived == False)
+    ).all()
+    
+    updated = []
+    for item in items:
+        item.price_markup = markup
+        session.add(item)
+        updated.append({
+            "id": str(item.id),
+            "title": item.title,
+            "new_price_markup": markup,
+        })
+    
+    session.commit()
+    
+    return BulkMarkupResponse(
+        message=f"Bulk markup applied to {len(updated)} items",
+        category=category_name,
+        markup_type="flat",
+        items_updated=len(updated),
+        updated_items=updated,
+    )
+
+
+@router.post("/categories/{category_name}/markup/bulk-percentage", response_model=BulkMarkupResponse)
+def bulk_category_markup_percentage(
+    category_name: str,
+    percentage: Decimal,
+    session = Depends(get_session),
+    admin = Depends(require_admin)
+):
+    if percentage < 0 or percentage > 100:
+        raise HTTPException(status_code=400, detail="Percentage must be between 0 and 100")
+    
+    category = session.exec(select(Category).where(Category.name == category_name)).first()
+    if not category:
+        raise HTTPException(status_code=404, detail=f"Category '{category_name}' not found")
+    
+    items = session.exec(
+        select(Item).where(Item.category == category_name, Item.is_archived == False)
+    ).all()
+    
+    updated = []
+    for item in items:
+        preferred = None
+        for pl in item.provider_listings:
+            if pl.is_active and pl.provider and pl.provider.is_active:
+                preferred = pl
+                break
+        
+        if preferred:
+            new_markup = (preferred.cost_price * percentage) / Decimal("100")
+            item.price_markup = new_markup.quantize(Decimal("0.01"))
+            updated.append({
+                "id": str(item.id),
+                "title": item.title,
+                "cost_price": preferred.cost_price,
+                "new_price_markup": item.price_markup,
+            })
+        else:
+            item.price_markup = Decimal("0")
+            updated.append({
+                "id": str(item.id),
+                "title": item.title,
+                "cost_price": None,
+                "new_price_markup": Decimal("0"),
+            })
+        
+        session.add(item)
+    
+    session.commit()
+    
+    return BulkMarkupResponse(
+        message=f"Bulk percentage markup applied to {len(updated)} items",
+        category=category_name,
+        markup_type="percentage",
+        items_updated=len(updated),
+        updated_items=updated,
+    )
 
 
 SUPPORTED_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "gif"}
@@ -768,6 +864,148 @@ def list_all_technicians(session = Depends(get_session), admin = Depends(require
     return results
 
 
+@router.get("/orders/fulfillment-queue", response_model=list[dict])
+def list_fulfillment_queue(session = Depends(get_session), admin = Depends(require_admin)):
+    orders = session.exec(
+        select(Order).where(Order.status == OrderStatus.PAID)
+    ).all()
+    queue = []
+    for order in orders:
+        needs_fulfillment = False
+        for oi in order.items:
+            item = session.exec(select(Item).where(Item.id == oi.item_id)).first()
+            if item and item.item_type.value == "SERVICE":
+                already_credentialed = session.exec(
+                    select(Credential).where(Credential.order_item_id == oi.id)
+                ).first()
+                if not already_credentialed:
+                    needs_fulfillment = True
+                    break
+        if needs_fulfillment:
+            queue.append({
+                "id": str(order.id),
+                "status": order.status.value,
+                "total_amount": order.total_amount,
+                "currency": order.currency,
+                "created_at": order.created_at.isoformat() if order.created_at else None,
+                "items": [
+                    {
+                        "id": str(oi.id),
+                        "item_id": str(oi.item_id),
+                        "quantity": oi.quantity,
+                        "unit_price": oi.unit_price,
+                    }
+                    for oi in order.items
+                ],
+            })
+    return queue
+
+
+@router.get("/orders/{order_id}/ready", response_model=dict)
+def get_order_fulfillment_detail(order_id: str, session = Depends(get_session), admin = Depends(require_admin)):
+    order = session.exec(select(Order).where(Order.id == order_id)).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    if order.status != OrderStatus.PAID:
+        raise HTTPException(status_code=400, detail="Order is not PAID")
+    
+    items_detail = []
+    for oi in order.items:
+        item = session.exec(select(Item).where(Item.id == oi.item_id)).first()
+        if not item:
+            continue
+        items_detail.append({
+            "order_item_id": str(oi.id),
+            "item_id": str(item.id),
+            "title": item.title,
+            "item_type": item.item_type.value,
+            "quantity": oi.quantity,
+            "unit_price": oi.unit_price,
+        })
+    
+    return {
+        "id": str(order.id),
+        "status": order.status.value,
+        "total_amount": order.total_amount,
+        "currency": order.currency,
+        "created_at": order.created_at.isoformat() if order.created_at else None,
+        "items": items_detail,
+    }
+
+
+@router.post("/orders/{order_id}/fulfill", response_model=dict)
+def fulfill_order_manual(order_id: str, fulfill_in: OrderFulfill, session = Depends(get_session), admin = Depends(require_admin)):
+    order = session.exec(select(Order).where(Order.id == order_id)).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    if order.status != OrderStatus.PAID:
+        raise HTTPException(status_code=400, detail="Order is not PAID")
+    
+    order_item_ids = {str(oi.id) for oi in order.items}
+    
+    for cred_assignment in fulfill_in.credentials:
+        try:
+            oi_id = uuid.UUID(cred_assignment.order_item_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid order_item_id: {cred_assignment.order_item_id}")
+        
+        if str(oi_id) not in order_item_ids:
+            raise HTTPException(status_code=400, detail=f"order_item_id {oi_id} does not belong to this order")
+        
+        oi = session.exec(select(OrderItem).where(OrderItem.id == oi_id)).first()
+        if not oi:
+            raise HTTPException(status_code=404, detail=f"Order item not found: {oi_id}")
+        
+        item = session.exec(select(Item).where(Item.id == oi.item_id)).first()
+        if not item or item.item_type.value != "SERVICE":
+            raise HTTPException(status_code=400, detail="Credentials can only be assigned to SERVICE items")
+        
+        already = session.exec(
+            select(Credential).where(Credential.order_item_id == oi_id)
+        ).first()
+        if already:
+            raise HTTPException(status_code=400, detail=f"Order item {oi_id} already has credentials assigned")
+        
+        encrypted = encrypt_payload(cred_assignment.payload)
+        credential = Credential(item_id=oi.item_id, payload=encrypted, order_item_id=oi_id)
+        session.add(credential)
+    
+    session.commit()
+    
+    user = session.exec(select(User).where(User.id == order.user_id)).first()
+    if user:
+        from app.services.email import send_credential_ready_email
+        send_credential_ready_email(user.email, str(order.id), "Credentials assigned by admin")
+    
+    return {"order_id": str(order.id), "status": "fulfilled", "credentials_assigned": len(fulfill_in.credentials)}
+
+
+@router.post("/orders/{order_id}/reject", response_model=dict)
+def reject_order(order_id: str, session = Depends(get_session), admin = Depends(require_admin)):
+    order = session.exec(select(Order).where(Order.id == order_id)).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    if order.status != OrderStatus.PAID:
+        raise HTTPException(status_code=400, detail="Order is not PAID")
+    
+    order.status = OrderStatus.CANCELLED
+    session.add(order)
+    session.commit()
+    
+    wallet = session.exec(select(Wallet).where(Wallet.user_id == order.user_id)).first()
+    if wallet:
+        from app.services.wallet_service import refund_to_wallet
+        try:
+            wallet, tx = refund_to_wallet(session, wallet, order.total_amount, f"Refund for cancelled order {order.id}")
+        except ValueError:
+            wallet = None
+    
+    return {"order_id": str(order.id), "status": OrderStatus.CANCELLED.value}
+
+
 @router.post("/technicians/{tech_id}/review", response_model=TechnicianResponse)
 def review_technician(
     tech_id: str,
@@ -801,4 +1039,58 @@ def review_technician(
         status=technician.status.value,
         specialization=technician.specialization,
         created_at=technician.created_at.isoformat() if technician.created_at else None,
+    )
+
+
+@router.get("/stats/summary", response_model=StatsSummaryResponse)
+def get_stats_summary(
+    days: int = 30,
+    session = Depends(get_session),
+    admin = Depends(require_admin),
+):
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+
+    period_orders = session.exec(
+        select(Order).where(Order.created_at >= cutoff)
+    ).all()
+
+    total_orders = len(period_orders)
+    orders_by_status: Dict[str, int] = {}
+    total_revenue = Decimal("0")
+    fulfilled_orders = 0
+    refunded_orders = 0
+
+    for order in period_orders:
+        status_val = order.status.value
+        orders_by_status[status_val] = orders_by_status.get(status_val, 0) + 1
+        if status_val == OrderStatus.FULFILLED:
+            fulfilled_orders += 1
+        if status_val == OrderStatus.REFUNDED:
+            refunded_orders += 1
+        if status_val in (OrderStatus.PAID, OrderStatus.FULFILLED):
+            total_revenue += order.total_amount
+
+    pending_fulfillment = orders_by_status.get(OrderStatus.PAID.value, 0) + orders_by_status.get(OrderStatus.PENDING.value, 0)
+
+    total_clients = session.exec(
+        select(func.count(User.id)).where(User.role == UserRole.CLIENT, User.is_active == True)
+    ).first() or 0
+
+    total_items = session.exec(
+        select(func.count(Item.id)).where(Item.is_archived == False)
+    ).first() or 0
+
+    low_stock_items = 0
+
+    return StatsSummaryResponse(
+        period_days=days,
+        total_orders=total_orders,
+        orders_by_status=orders_by_status,
+        total_revenue=total_revenue,
+        total_clients=total_clients,
+        total_items=total_items,
+        low_stock_items=low_stock_items,
+        fulfilled_orders=fulfilled_orders,
+        pending_fulfillment=pending_fulfillment,
+        refunded_orders=refunded_orders,
     )

@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     USD_TO_ZAR_RATE: float = 16.5
     MEDIA_ROOT: str = "media"
     MEDIA_PUBLIC_URL: str = "/media"
+    CLOUDFLARE_API_TOKEN: str = ""
+    CLOUDFLARE_ACCOUNT_TAG: str = ""
+    CLOUDFLARE_ANALYTICS_DOMAIN: str = "kasigsm.co.za"
     ALLOWED_EXTENSIONS: set[str] = {"png", "jpg", "jpeg", "webp", "gif"}
     CORS_ALLOW_ALL: bool = False
     CORS_ORIGINS: list[str] = [
@@ -22,8 +25,6 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost:5174",
     ]
-    CORS_ALLOW_NGROK: bool = True
-    CORS_NGROK_PATTERNS: list[str] = []
     MAX_UPLOAD_BYTES: int = 5 * 1024 * 1024
     brevo_smtp_host: str = "smtp-relay.brevo.com"
     brevo_smtp_port: int = 587
@@ -31,18 +32,17 @@ class Settings(BaseSettings):
     brevo_smtp_password: str = ""
     brevo_sender_email: str = "noreply@yourdomain.com"
     brevo_sender_name: str = "KasI GSM"
+    wallet_topup_min: int = 100
+    wallet_topup_max: int = 5000
+    wallet_topup_step: int = 100
+    wallet_expiry_days: int = 90
+    wallet_pending_expiry_hours: int = 48
+    wallet_low_balance_threshold: int = 100
 
     def get_cors_origins(self) -> list[str]:
-        if self.CORS_ALLOW_ALL or self.CORS_ALLOW_NGROK:
+        if self.CORS_ALLOW_ALL:
             return ["*"]
         return list(self.CORS_ORIGINS)
-
-    # Rate limiting defaults
-    AUTH_RATE_LIMIT: int = 5
-    OTP_RATE_LIMIT: int = 3
-    RATE_WINDOW_SECONDS: int = 900
-    LOGIN_LOCKOUT_AFTER: int = 5
-    LOGIN_LOCKOUT_SECONDS: int = 900
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

@@ -82,12 +82,6 @@ def create_order(order_in: OrderCreate, user = Depends(get_current_user), sessio
 def list_orders(user = Depends(get_current_user), session = Depends(get_session)):
     if not user:
         raise HTTPException(status_code=403, detail="Not authenticated")
-
-
-@router.get("/orders/{order_id}", response_model=OrderPublic)
-def get_order(order_id: str, user = Depends(get_current_user), session = Depends(get_session)):
-    if not user:
-        raise HTTPException(status_code=403, detail="Not authenticated")
     
     orders = session.exec(select(Order).where(Order.user_id == user.id)).all()
     return [_order_to_public(o, session) for o in orders]

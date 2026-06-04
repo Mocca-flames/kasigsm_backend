@@ -126,3 +126,29 @@ def send_credential_ready_email(to_email: str, order_id: str, credential_preview
         f"<p>— {settings.brevo_sender_name}</p>"
     )
     return send_email(to_email, subject, body, html_body)
+
+
+def send_wallet_topup_approved_email(to_email: str, amount: float, new_balance: float, reference: str | None = None) -> bool:
+    subject = f"KasI GSM — Wallet top-up of {amount:,.2f} ZAR approved"
+    body = (
+        f"Hi,\n\n"
+        f"Your EFT top-up request for {amount:,.2f} ZAR has been approved.\n"
+        f"Your new wallet balance is {new_balance:,.2f} ZAR.\n\n"
+        f"Reference: {reference or 'N/A'}\n\n"
+        f"Best regards,\n"
+        f"{settings.brevo_sender_name}\n"
+    )
+    return send_email(to_email, subject, body)
+
+
+def send_wallet_low_balance_email(to_email: str, current_balance: float) -> bool:
+    subject = "KasI GSM — Wallet balance is low"
+    body = (
+        f"Hi,\n\n"
+        f"Your wallet balance is now {current_balance:,.2f} ZAR, "
+        f"which is below the low balance threshold of {settings.wallet_low_balance_threshold:,.2f} ZAR.\n"
+        f"Please top up to continue using wallet checkout.\n\n"
+        f"Best regards,\n"
+        f"{settings.brevo_sender_name}\n"
+    )
+    return send_email(to_email, subject, body)

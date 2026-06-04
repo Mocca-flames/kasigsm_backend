@@ -18,6 +18,7 @@ class User(SQLModel, table=True):
     role: UserRole = Field(
         sa_column=Column(SAEnum(UserRole), nullable=False, default=UserRole.CLIENT)
     )
+    client_ref: Optional[str] = Field(sa_type=String(6), default=None, unique=True, index=True)
     is_active: bool = Field(default=True)
     created_at: datetime = Field(
         sa_column=Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

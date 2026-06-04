@@ -13,6 +13,7 @@ from app.schemas.item import UserRegister, Token, OTPVerify
 from app.utils.email import send_welcome_email, send_otp_email
 from app.models.otp import create_otp, verify_otp
 from app.dependencies import rate_limit_auth, rate_limit_otp, login_throttle
+from app.utils.wallet import get_or_create_wallet
 
 router = APIRouter()
 
@@ -31,7 +32,9 @@ def register(user_in: UserRegister, request: Request, session = Depends(get_sess
     session.add(user)
     session.commit()
     session.refresh(user)
-    
+
+    get_or_create_wallet(session, user.id)
+
     code = create_otp(session, user.email, purpose="REGISTER")
     send_otp_email(user.email, code)
     
