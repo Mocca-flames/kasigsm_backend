@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from app.utils.security import get_current_user, require_admin
-from app.routers import public, auth, admin, client, payments, search, technician, wallet, analytics
+from app.routers import public, auth, admin, client, payments, search, technician, wallet, analytics, promo, device_catalog
 from app.config import settings
 
 app = FastAPI(title="KasI GSM API", version="0.1.0")
@@ -27,6 +27,8 @@ app.include_router(payments.router, prefix="/payments")
 app.include_router(wallet.router, prefix="/wallet")
 app.include_router(search.router)
 app.include_router(analytics.router, prefix="/admin/analytics", dependencies=[Depends(require_admin)])
+app.include_router(device_catalog.router)
+app.include_router(promo.router)
 
 
 @app.exception_handler(403)

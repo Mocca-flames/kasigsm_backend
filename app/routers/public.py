@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Optional
 from decimal import Decimal
 from sqlmodel import select
@@ -9,6 +9,11 @@ from app.models.item import Item, ItemType, Provider, ProviderListing
 from app.schemas.item import ItemPublic, ItemDetail
 from app.services.pricing import get_price_final
 from app.utils.media import resolve_media_url
+from app.services.search import resolve_category
+from app.utils.slug import token_matches_slug, slug_tokens, DEVICE_PREFIXES
+from app.models.banner import Banner
+from app.config import settings
+import re
 
 router = APIRouter()
 
@@ -17,6 +22,7 @@ router = APIRouter()
 def list_items(
     item_type: Optional[ItemType] = None,
     category: Optional[str] = None,
+    search: Optional[str] = Query(None, description="Search by title or slug tokens for phones/devices/brands"),
     session = Depends(get_session)
 ):
     active_item_ids = (
@@ -35,9 +41,36 @@ def list_items(
     if item_type:
         stmt = stmt.where(Item.item_type == item_type)
     if category:
-        stmt = stmt.where(Item.category == category)
+        resolved_category, _ = resolve_category(category)
+        stmt = stmt.where(Item.category == (resolved_category or category))
     items = session.exec(stmt).all()
-    
+
+    if search:
+        q = search.lower().strip()
+        q_tokens = [t for t in re.split(r"[\s-]+", q) if t]
+
+        def _relevant(item: Item):
+            slug_score = 0
+            title_score = 0
+            if token_matches_slug(item.slug, search):
+                slug_score += 2
+            if q in item.title.lower():
+                title_score += 1
+                for qt in q_tokens:
+                    if qt in item.title.lower():
+                        title_score += 1
+                        break
+            tokens = slug_tokens(item.slug)
+            normalized = [DEVICE_PREFIXES.get(t, t) for t in tokens]
+            for qt in q_tokens:
+                nqt = DEVICE_PREFIXES.get(qt, qt)
+                if any(nqt == t or t.startswith(nqt) or nqt.startswith(t) for t in normalized):
+                    slug_score += 1
+            return slug_score + title_score
+
+        ranked = sorted(items, key=lambda i: -_relevant(i))
+        items = [r for r in ranked if _relevant(r) > 0 or q in r.title.lower()]
+
     results = []
     for item in items:
         price_final = get_price_final(item, session)

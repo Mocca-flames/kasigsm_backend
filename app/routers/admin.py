@@ -25,9 +25,11 @@ from app.schemas.banner import BannerCreate, BannerEdit, BannerPublic
 from app.schemas.technician import TechnicianResponse, TechnicianReview
 from app.schemas.order import OrderFulfill, StatsSummaryResponse
 from app.services.pricing import get_price_detail
+from app.services.search import resolve_category
 from app.utils.encryption import encrypt_payload
 from app.utils.security import require_admin, get_current_user
 from app.utils.media import resolve_media_url
+from app.utils.slug import DEVICE_PREFIXES, slug_tokens, token_matches_slug, slug_search_score, brand_from_slug
 
 router = APIRouter()
 
@@ -78,11 +80,98 @@ def build_item_detail(item: Item, session) -> ItemDetail:
 
 
 @router.get("/items", response_model=List[ItemDetail])
-def list_all_items(session = Depends(get_session)):
-    items = session.exec(select(Item).where(Item.is_archived == False)).all()
+def list_all_items(
+    session = Depends(get_session),
+    q: Optional[str] = Query(default=None, description="Search by title, slug tokens, phone model, brand (iphone, samsung, xiaomi, etc.)"),
+    item_type: Optional[ItemType] = Query(default=None),
+    category: Optional[str] = Query(default=None),
+    service_type: Optional[str] = Query(default=None, description="Filter SERVICE items by service_type meta field value"),
+    service: Optional[str] = Query(default=None, description="Filter items whose title/slug contains 'service' keyword"),
+    product: Optional[bool] = Query(default=None, description="Filter by type: true=PRODUCT, false=SERVICE"),
+    brand: Optional[str] = Query(default=None, description="Filter by phone/device brand from slug (iphone, samsung, xiaomi, huawei, etc.)"),
+    with_media: bool = Query(default=False, description="When true, resolve and include full media_url for all items"),
+    alphabetize: bool = Query(default=False, description="When enabled without a query, sort result alphabetically by title"),
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
+):
+    stmt = select(Item).where(Item.is_archived == False, Item.is_visible == True)
+
+    if item_type:
+        stmt = stmt.where(Item.item_type == item_type)
+    if category:
+        resolved_category, _ = resolve_category(category)
+        stmt = stmt.where(Item.category == (resolved_category or category))
+
+    rows = list(session.exec(stmt).all())
+
+    if q:
+        q_lower = q.lower().strip()
+        q_tokens = [t for t in re.split(r"[\s-]+", q_lower) if t]
+
+        def _score(item: Item) -> int:
+            score = 0
+            score += slug_search_score(item.slug, q)
+
+            q_in_title = q_lower in item.title.lower()
+            if q_in_title:
+                score += 3
+
+            title_lower = item.title.lower()
+            for qt in q_tokens:
+                if qt in title_lower:
+                    score += 1
+
+            try:
+                price_match = int(qt)
+                if str(price_match) in title_lower or "price" in title_lower:
+                    score += 1
+            except ValueError:
+                pass
+
+            return score
+
+        scored = [(_score(i), i) for i in rows]
+        scored.sort(key=lambda x: -x[0])
+        rows = [i for s, i in scored if s > 0]
+
+    if brand and not q:
+        norm_brand = brand.lower().strip()
+        def _brand_match(item: Item) -> bool:
+            item_brand = brand_from_slug(item.slug)
+            if item_brand is None:
+                return False
+            if item_brand == norm_brand:
+                return True
+            if item_brand.startswith(norm_brand) or norm_brand.startswith(item_brand):
+                return True
+            return False
+
+        rows = [i for i in rows if _brand_match(i)]
+
+    if product is not None:
+        target_type = ItemType.PRODUCT if product else ItemType.SERVICE
+        rows = [i for i in rows if i.item_type == target_type]
+
+    if service_type:
+        rows = [i for i in rows if i.meta and i.meta.get("service_type", "").lower() == service_type.lower()]
+
+    if service and not q:
+        svc_lower = service.lower()
+        rows = [i for i in rows if svc_lower in i.title.lower() or svc_lower in i.slug.lower()]
+
+    if alphabetize and not q:
+        rows.sort(key=lambda i: i.title.lower())
+
+    total = len(rows)
+    items = rows[offset:offset + limit]
+
     if not items:
         return []
 
+    return _build_admin_items(items, session, include_media=with_media)
+
+
+def _build_admin_items(items: List[Item], session, include_media: bool = False) -> List[ItemDetail]:
     item_ids = [item.id for item in items]
 
     listings = session.exec(
@@ -144,6 +233,8 @@ def list_all_items(session = Depends(get_session)):
         remaining = cc["total"] - cc["used"]
         low_stock = remaining < 3
 
+        media_url = resolve_media_url(item.thumbnail) if include_media else None
+
         results.append(ItemDetail(
             id=str(item.id),
             uid=item.uid,
@@ -153,7 +244,7 @@ def list_all_items(session = Depends(get_session)):
             item_type=item.item_type,
             category=item.category,
             thumbnail=item.thumbnail,
-            media_url=resolve_media_url(item.thumbnail),
+            media_url=media_url,
             price_final=price_final,
             currency=item.currency,
             delivery_time=item.delivery_time,

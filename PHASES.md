@@ -209,6 +209,11 @@
   - Admin endpoints: review top-ups, manual credit, list wallets (/admin/wallet/top-ups, /admin/wallet/{id}/credit, /admin/wallet/all)
   - .env configurable top-up limits, expiry, low-balance threshold
   - Brevo notifications: top-up approved, low balance
-- Discount / promo codes
-- Audit log for admin actions
+- [x] Discount / promo codes
+  - `PromoCode` + `PromoCodeUsage` models
+  - Admin CRUD: `GET/POST/PATCH/DELETE /promo-codes`
+  - Validation endpoint: `POST /promo-codes/validate`
+  - Client order integration: optional `promo_code` on `POST /orders`
+  - Supports PERCENTAGE / FIXED_AMOUNT, use limits, per-user limits, date windows, category/item restrictions
+- [ ] Audit log for admin actions
 

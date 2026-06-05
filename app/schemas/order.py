@@ -19,6 +19,7 @@ class OrderItemCreate(BaseModel):
 
 class OrderCreate(BaseModel):
     items: list[OrderItemCreate]
+    promo_code: Optional[str] = None
 
 
 class CredentialPublic(BaseModel):
@@ -38,6 +39,9 @@ class OrderItemPublic(BaseModel):
 class OrderPublic(BaseModel):
     id: str
     status: str
+    subtotal: Decimal
+    discount_code: Optional[str] = None
+    discount_amount: Decimal
     total_amount: Decimal
     currency: str
     created_at: str

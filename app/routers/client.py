@@ -1,17 +1,20 @@
-from fastapi import APIRouter, Depends, HTTPException
-from typing import List
+from fastapi import APIRouter, Depends, HTTPException, Query
+from typing import List, Optional
 from decimal import Decimal
-from sqlmodel import select
+from sqlmodel import select, or_
 import uuid
 
 from app.database import get_session
-from app.models.item import Item
+from app.models.item import Item, ItemType, Provider, ProviderListing
 from app.models.order import Order, OrderItem, OrderStatus
 from app.models.credential import Credential
 from app.schemas.order import OrderCreate, OrderPublic, OrderItemPublic, CredentialPublic
 from app.services.pricing import get_price_final
+from app.services.search import resolve_category
+from app.services.promo import validate_promo_code, apply_promo_code, PromoValidationError
 from app.utils.security import get_current_user
 from app.config import settings
+from app.utils.slug import token_matches_slug, slug_tokens
 
 router = APIRouter()
 
@@ -37,6 +40,7 @@ def create_order(order_in: OrderCreate, user = Depends(get_current_user), sessio
     
     total = Decimal("0")
     order_items = []
+    item_objects = []
     
     for oi in order_in.items:
         item = session.exec(select(Item).where(Item.id == oi.item_id)).first()
@@ -53,19 +57,64 @@ def create_order(order_in: OrderCreate, user = Depends(get_current_user), sessio
             quantity=oi.quantity,
             unit_price=price_final
         ))
+        item_objects.append({"item": item, "quantity": oi.quantity})
         
         if item.stock is not None:
             item.stock -= oi.quantity
             session.commit()
     
-    order = Order(user_id=user.id, status=OrderStatus.PENDING, total_amount=total, items=order_items)
+    discount_amount = Decimal("0")
+    discount_code = None
+    
+    if order_in.promo_code:
+        try:
+            result = validate_promo_code(
+                code=order_in.promo_code,
+                user_id=str(user.id),
+                order_items=[{"item_id": str(oi.item_id), "quantity": oi.quantity} for oi in order_in.items],
+                session=session,
+            )
+            discount_amount = result["discount_amount"]
+            discount_code = result["promo"].code.upper()
+        except PromoValidationError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+    
+    final_total = total - discount_amount
+    if final_total < 0:
+        final_total = Decimal("0")
+    
+    order = Order(
+        user_id=user.id,
+        status=OrderStatus.PENDING,
+        subtotal=total,
+        discount_code=discount_code,
+        discount_amount=discount_amount,
+        total_amount=final_total,
+        items=order_items,
+    )
     session.add(order)
     session.commit()
     session.refresh(order)
     
+    if discount_code:
+        try:
+            apply_promo_code(
+                code=discount_code,
+                user_id=str(user.id),
+                order_id=str(order.id),
+                order_amount=total,
+                discount_amount=discount_amount,
+                session=session,
+            )
+        except Exception:
+            pass
+    
     return OrderPublic(
         id=str(order.id),
         status=order.status.value,
+        subtotal=order.subtotal,
+        discount_code=order.discount_code,
+        discount_amount=order.discount_amount,
         total_amount=order.total_amount,
         currency=order.currency,
         created_at=order.created_at.isoformat(),
@@ -129,6 +178,9 @@ def _order_to_public(order: Order, session) -> OrderPublic:
     return OrderPublic(
         id=str(order.id),
         status=order.status.value,
+        subtotal=order.subtotal,
+        discount_code=order.discount_code,
+        discount_amount=order.discount_amount,
         total_amount=order.total_amount,
         currency=order.currency,
         created_at=order.created_at.isoformat(),

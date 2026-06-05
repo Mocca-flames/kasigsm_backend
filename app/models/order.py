@@ -22,6 +22,9 @@ class Order(SQLModel, table=True):
     )
     payment_ref: Optional[str] = Field(sa_type=String, default=None)
     payment_gateway: Optional[str] = Field(sa_type=String, default=None)
+    subtotal: Decimal = Field(max_digits=12, decimal_places=2, nullable=False, default=Decimal("0"))
+    discount_code: Optional[str] = Field(sa_type=String(50), default=None)
+    discount_amount: Decimal = Field(max_digits=12, decimal_places=2, nullable=False, default=Decimal("0"))
     total_amount: Decimal = Field(max_digits=12, decimal_places=2, nullable=False)
     currency: str = Field(default="ZAR", sa_type=String(3))
     created_at: datetime = Field(
