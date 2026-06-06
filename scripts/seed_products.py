@@ -31,7 +31,7 @@ def seed_products(file_path: str, provider_name: str) -> None:
                 title=prod["title"],
                 description=prod.get("description"),
                 item_type=ItemType.PRODUCT,
-                category=prod["category"],
+                category=prod.get("category", "Remote Services" if "remote" in file_path else "Tool Rental"),
                 stock=prod.get("stock", 0),
                 is_visible=True,
             )
