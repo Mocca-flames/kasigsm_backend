@@ -25,6 +25,7 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost:5174",
     ]
+    FRONTEND_URL: str = "http://localhost:5173"
     MAX_UPLOAD_BYTES: int = 5 * 1024 * 1024
     brevo_smtp_host: str = "smtp-relay.brevo.com"
     brevo_smtp_port: int = 587

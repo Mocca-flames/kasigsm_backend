@@ -1,5 +1,5 @@
-from typing import Optional, Literal
-from pydantic import BaseModel
+from typing import Optional, Literal, List
+from pydantic import BaseModel, Field
 from decimal import Decimal
 from enum import Enum
 
@@ -30,6 +30,14 @@ class ItemPublic(BaseModel):
     currency: str
     delivery_time: Optional[str]
     stock: Optional[int]
+    meta: Optional[dict] = None
+
+
+class ItemsPageResponse(BaseModel):
+    items: List[ItemPublic]
+    total: int
+    page: int
+    limit: int
 
 
 class ItemDetail(BaseModel):
@@ -51,6 +59,7 @@ class ItemDetail(BaseModel):
     provider_listings: list[ProviderListingPublic] = []
     effective_markup: Optional[Decimal] = None
     markup_source: Optional[Literal["item", "provider_category"]] = None
+    meta: Optional[dict] = None
 
 
 class ItemCreate(BaseModel):
@@ -81,7 +90,7 @@ class ItemEdit(BaseModel):
 
 class OTPVerify(BaseModel):
     email: str
-    code: str
+    code: str = Field(..., alias="otp")
 
 
 class CategoryMarkup(BaseModel):
@@ -116,6 +125,15 @@ class UserRegister(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+
+class ForgotPassword(BaseModel):
+    email: str
+
+
+class ResetPassword(BaseModel):
+    token: str
+    new_password: str
 
 
 class ForgotPassword(BaseModel):

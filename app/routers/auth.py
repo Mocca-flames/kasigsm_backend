@@ -9,10 +9,11 @@ from jose import jwt
 from app.database import get_session
 from app.models.user import User
 from app.config import settings
-from app.schemas.item import UserRegister, Token, OTPVerify
-from app.utils.email import send_welcome_email, send_otp_email
+from app.schemas.item import UserRegister, Token, OTPVerify, ForgotPassword, ResetPassword
+from app.utils.email import send_welcome_email, send_otp_email, send_password_reset_email, send_password_changed_email, send_email
 from app.models.otp import create_otp, verify_otp
-from app.dependencies import rate_limit_auth, rate_limit_otp, login_throttle
+from app.models.password_reset import create_password_reset, get_valid_password_reset
+from app.dependencies import rate_limit_auth, rate_limit_otp, login_throttle, rate_limiter
 from app.utils.wallet import get_or_create_wallet
 
 router = APIRouter()
@@ -82,21 +83,55 @@ def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), se
     login_key = login_throttle(request)
     
     user = session.exec(select(User).where(User.email == form_data.username)).first()
-    if not user or not bcrypt.checkpw(form_data.password.encode(), user.password_hash.encode()):
-        from app.dependencies import rate_limiter
+    
+    if not user:
+        rate_limiter.record_failure(login_key)
+        raise HTTPException(status_code=404, detail="User not found. Please register.")
+    
+    if not user.is_active:
+        rate_limiter.record_failure(login_key)
+        raise HTTPException(status_code=403, detail="Account not active. Please verify your email.")
+    
+    if not bcrypt.checkpw(form_data.password.encode(), user.password_hash.encode()):
         rate_limiter.record_failure(login_key)
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    from app.dependencies import rate_limiter
     rate_limiter.clear(login_key)
-    
-    if not user.is_active:
-        raise HTTPException(status_code=403, detail="Account not verified. Please verify your email first.")
     
     access_token_expires = timedelta(minutes=settings.JWT_EXPIRE_MINUTES)
     access_token = jwt.encode(
-        {"sub": user.email, "exp": datetime.utcnow() + access_token_expires},
+        {"sub": user.email, "exp": datetime.utcnow() + access_token_expires, "reset": int(user.password_reset_at.timestamp()) if user.password_reset_at else 0},
         settings.SECRET_KEY,
         algorithm="HS256"
     )
     return Token(access_token=access_token, token_type="bearer")
+
+
+@router.post("/forgot-password", response_model=dict)
+def forgot_password(payload: ForgotPassword, request: Request, session = Depends(get_session)):
+    rate_limit_auth(request)
+    user = session.exec(select(User).where(User.email == payload.email)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Email not found")
+    reset = create_password_reset(session, user.id, user.email)
+    reset_link = f"{settings.FRONTEND_URL}/reset-password?token={reset.token}"
+    send_password_reset_email(user.email, reset_link)
+    return {"message": "If an account exists for this email, a password reset link has been sent."}
+
+
+@router.post("/reset-password", response_model=dict)
+def reset_password(payload: ResetPassword, session = Depends(get_session)):
+    reset = get_valid_password_reset(session, payload.token)
+    if not reset:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    user = session.exec(select(User).where(User.id == reset.user_id)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.password_hash = bcrypt.hashpw(payload.new_password.encode(), bcrypt.gensalt()).decode()
+    user.password_reset_at = datetime.now(timezone.utc)
+    session.add(user)
+    reset.is_used = True
+    session.add(reset)
+    session.commit()
+    send_email(to_email=user.email, subject="Password changed", body="Your password has been reset successfully.")
+    return {"message": "Password reset successful"}

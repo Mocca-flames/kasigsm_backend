@@ -7,3 +7,4 @@ from app.models.technician import Technician, TechnicianStatus
 from app.models.category import Category, ProviderCategoryMarkup
 from app.models.wallet import Wallet, WalletTransaction, WalletTopUp
 from app.models.promo import PromoCode, PromoCodeUsage, DiscountType
+from app.models.password_reset import PasswordReset

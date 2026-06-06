@@ -364,7 +364,23 @@ All admin routes are mounted with `Depends(require_admin)`.
 - **Endpoint:** `PATCH /admin/banners/{banner_id}/toggle`
 - **Query Parameters:** `is_active` (bool, required)
 
-### 29. List Providers (Suppliers)
+### 29. Upload Banner Image
+
+- **Endpoint:** `PATCH /admin/banners/{banner_id}/image`
+- **Auth:** ADMIN
+- **Request:** `multipart/form-data` with `file` field (optional) OR `image_url` query param (optional)
+- **Behavior:** Replaces the banner image. File uploads are saved to local `/media` with a sanitized UUID filename; `image_url` can be a direct external URL.
+- **Response (200 OK):**
+  ```json
+  {
+    "id": "uuid",
+    "image_url": "/media/a1b2c3d4e5f6.jpg",
+    "media_url": "/media/a1b2c3d4e5f6.jpg"
+  }
+  ```
+- **Errors:** 404 if banner not found; 400 for missing file/url or unsupported file type / size.
+
+### 30. List Providers (Suppliers)
 
 - **Endpoint:** `GET /admin/providers`
 - **Response (200 OK):**

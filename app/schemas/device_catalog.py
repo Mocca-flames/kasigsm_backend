@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 
 
 class IssueOut(BaseModel):
@@ -45,8 +45,25 @@ class ToolRecommendation(BaseModel):
     description: Optional[str]
     website_url: Optional[str]
     reason: Optional[str]
+    rent_slug: Optional[str] = None
+    rent_price_final: Optional[float] = None
+    rent_currency: Optional[str] = None
+    full_slug: Optional[str] = None
+    full_price_final: Optional[float] = None
+    full_currency: Optional[str] = None
 
 
 class RecommendationResponse(BaseModel):
     issue: IssueOut
     tools: list[ToolRecommendation]
+
+
+class ScanServiceRequest(BaseModel):
+    issues: list[str]
+    brand_slug: Optional[str] = None
+    chipset_key: Optional[str] = None
+    top: int = 3
+
+
+class ScanServiceResponse(BaseModel):
+    services: list[ToolRecommendation]

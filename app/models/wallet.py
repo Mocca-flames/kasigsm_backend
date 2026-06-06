@@ -39,6 +39,7 @@ class Wallet(SQLModel, table=True):
         sa_column=Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     )
 
+    client_ref: Optional[str] = Field(sa_type=String, default=None, max_length=6, index=True, unique=True)
     user: "User" = Relationship()
     transactions: list["WalletTransaction"] = Relationship(back_populates="wallet")
     top_ups: list["WalletTopUp"] = Relationship(back_populates="wallet")
@@ -75,5 +76,6 @@ class WalletTopUp(SQLModel, table=True):
     reviewed_at: Optional[datetime] = Field(
         sa_column=Column(DateTime(timezone=True), default=None)
     )
+    balance: Optional[Decimal] = Field(max_digits=12, decimal_places=2, default=None)
 
     wallet: Wallet = Relationship(back_populates="top_ups")

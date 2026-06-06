@@ -141,6 +141,47 @@ def send_wallet_topup_approved_email(to_email: str, amount: float, new_balance: 
     return send_email(to_email, subject, body)
 
 
+def send_password_reset_email(to_email: str, reset_link: str) -> bool:
+    subject = "Reset your KasI GSM password"
+    body = (
+        f"Hi,\n\n"
+        f"Click the link below to reset your password:\n\n"
+        f"{reset_link}\n\n"
+        "This link expires in 1 hour. If you didn't request this, you can safely ignore this email.\n\n"
+        f"Best regards,\n"
+        f"{settings.brevo_sender_name}\n"
+    )
+    html_body = (
+        f"<p>Hi,</p>"
+        f"<p>Click the button below to reset your password:</p>"
+        f"<p><a href=\"{reset_link}\" style=\""
+        f"background-color:#2563eb;color:#fff;padding:10px 20px;border-radius:6px;"
+        f"text-decoration:none;font-weight:bold;\">Reset Password</a></p>"
+        f"<p>This link expires in <strong>1 hour</strong>.</p>"
+        f"<p>If you didn't request this, you can safely ignore this email.</p>"
+        f"<p>— {settings.brevo_sender_name}</p>"
+    )
+    return send_email(to_email, subject, body, html_body)
+
+
+def send_password_changed_email(to_email: str) -> bool:
+    subject = "KasI GSM — Password changed"
+    body = (
+        f"Hi,\n\n"
+        "Your password has been changed successfully.\n\n"
+        "If you did not make this change, please contact support immediately.\n\n"
+        f"Best regards,\n"
+        f"{settings.brevo_sender_name}\n"
+    )
+    html_body = (
+        f"<p>Hi,</p>"
+        f"<p>Your password has been changed successfully.</p>"
+        f"<p>If you did not make this change, contact support immediately.</p>"
+        f"<p>— {settings.brevo_sender_name}</p>"
+    )
+    return send_email(to_email, subject, body, html_body)
+
+
 def send_wallet_low_balance_email(to_email: str, current_balance: float) -> bool:
     subject = "KasI GSM — Wallet balance is low"
     body = (

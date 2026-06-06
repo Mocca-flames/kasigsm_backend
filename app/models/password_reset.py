@@ -37,8 +37,9 @@ def create_password_reset(session, user_id: uuid.UUID, email: str) -> PasswordRe
 
 
 def get_valid_password_reset(session, token: str) -> PasswordReset | None:
+    from sqlmodel import select
     return session.exec(
-        __import__("sqlmodel").select(PasswordReset).where(
+        select(PasswordReset).where(
             PasswordReset.token == token,
             PasswordReset.is_used == False,
             PasswordReset.expires_at > datetime.now(timezone.utc),

@@ -11,7 +11,7 @@ services:
         condition: service_healthy
     volumes:
       - .:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: ./entrypoint.sh
 
   db:
     image: postgres:16-alpine
@@ -28,6 +28,22 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  seed:
+    build: .
+    environment:
+      - DATABASE_URL=postgresql://kasi:kasi@db:5432/kasigsm
+      - PYTHONPATH=/app
+    depends_on:
+      api:
+        condition: service_started
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    command: python scripts/seed_auth.py
+    profiles:
+      - tools
 
 volumes:
   pgdata:

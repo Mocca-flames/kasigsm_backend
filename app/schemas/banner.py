@@ -35,3 +35,5 @@ class BannerPublic(BaseModel):
     image_url: Optional[str]
     link_url: Optional[str]
     is_dismissible: bool
+    starts_at: Optional[datetime] = None
+    ends_at: Optional[datetime] = None

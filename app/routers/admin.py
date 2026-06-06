@@ -917,6 +917,31 @@ def toggle_banner(banner_id: str, is_active: bool, session=Depends(get_session))
     }
 
 
+@router.patch("/banners/{banner_id}/image", response_model=dict)
+def upload_banner_image(banner_id: str, image_url: Optional[str] = None, file: UploadFile = File(None), session=Depends(get_session)):
+    banner = session.exec(select(Banner).where(Banner.id == banner_id)).first()
+    if not banner:
+        raise HTTPException(status_code=404, detail="Banner not found")
+    if file is not None:
+        try:
+            banner.image_url = _save_upload(file)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        finally:
+            file.file.close()
+    elif image_url is not None:
+        banner.image_url = image_url
+    else:
+        raise HTTPException(status_code=400, detail="Provide either file or image_url")
+    session.commit()
+    session.refresh(banner)
+    return {
+        "id": str(banner.id),
+        "image_url": banner.image_url,
+        "media_url": resolve_media_url(banner.image_url),
+    }
+
+
 @router.get("/technicians/requests", response_model=list[TechnicianResponse])
 def list_technician_requests(session = Depends(get_session), admin = Depends(require_admin)):
     technicians = session.exec(

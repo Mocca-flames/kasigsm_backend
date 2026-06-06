@@ -1,31 +1,69 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Optional
 from decimal import Decimal
-from sqlmodel import select
+from sqlmodel import select, or_
 from datetime import datetime, timezone
 
 from app.database import get_session
 from app.models.item import Item, ItemType, Provider, ProviderListing
-from app.schemas.item import ItemPublic, ItemDetail
-from app.services.pricing import get_price_final
+from app.schemas.item import ItemPublic, ItemDetail, ItemsPageResponse
+from app.services.pricing import get_price_final_bulk, build_markup_map, get_price_final
 from app.utils.media import resolve_media_url
 from app.services.search import resolve_category
-from app.utils.slug import token_matches_slug, slug_tokens, DEVICE_PREFIXES
+from app.utils.slug import token_matches_slug, slug_tokens, DEVICE_PREFIXES, matches_slug_query
 from app.models.banner import Banner
-from app.config import settings
+from app.schemas.banner import BannerPublic
 import re
 
 router = APIRouter()
 
 
-@router.get("/items", response_model=List[ItemPublic])
+def _slug_search_score(slug: str, query: str) -> int:
+    q_lower = query.lower().strip()
+    q_tokens = [t for t in re.split(r"[\s-]+", q_lower) if t]
+    if not q_tokens:
+        return 0
+    score = 0
+    if q_lower in slug.lower():
+        score += 10
+    tokens = slug_tokens(slug)
+    normalized = [DEVICE_PREFIXES.get(t, t) for t in tokens]
+    all_match = True
+    token_match = 0
+    for qt in q_tokens:
+        nqt = DEVICE_PREFIXES.get(qt, qt)
+        matched = any(nqt == t or t.startswith(nqt) or nqt.startswith(t) for t in normalized)
+        if matched:
+            token_match += 1
+        else:
+            all_match = False
+    if all_match and q_tokens:
+        score += 5
+    score += token_match
+    return score
+
+
+@router.get("/items", response_model=ItemsPageResponse)
 def list_items(
     item_type: Optional[ItemType] = None,
     category: Optional[str] = None,
     search: Optional[str] = Query(None, description="Search by title or slug tokens for phones/devices/brands"),
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
     session = Depends(get_session)
 ):
-    active_item_ids = (
+    resolved_category = None
+    category_messages = []
+    if category:
+        resolved_category, category_messages = resolve_category(category)
+
+    if item_type == ItemType.SERVICE and not (resolved_category or category):
+        resolved_category = "Remote Services"
+        search_categories = ["Remote Services", "Tool Rental"]
+    else:
+        search_categories = [resolved_category] if resolved_category else None
+
+    active_subq = (
         select(ProviderListing.item_id)
         .join(Provider)
         .where(
@@ -33,47 +71,49 @@ def list_items(
             Provider.is_active == True,
         )
     )
+
+    q = search.lower().strip() if search else None
+
     stmt = select(Item).where(
         Item.is_visible == True,
         Item.is_archived == False,
-        Item.id.in_(active_item_ids),
+        Item.id.in_(active_subq),
     )
     if item_type:
         stmt = stmt.where(Item.item_type == item_type)
-    if category:
-        resolved_category, _ = resolve_category(category)
-        stmt = stmt.where(Item.category == (resolved_category or category))
+    if search_categories:
+        stmt = stmt.where(Item.category.in_(search_categories))
+    elif resolved_category:
+        stmt = stmt.where(Item.category == resolved_category)
+
+    if q:
+        stmt = stmt.where(
+            or_(
+                Item.title.ilike(f"%{q}%"),
+                Item.slug.op("~*")(re.escape(q)),
+            )
+        )
+
+    total_stmt = stmt
+    total = len(session.exec(total_stmt).all())
+
+    stmt = stmt.order_by(Item.created_at.desc()).offset((page - 1) * limit).limit(limit)
     items = session.exec(stmt).all()
 
-    if search:
-        q = search.lower().strip()
-        q_tokens = [t for t in re.split(r"[\s-]+", q) if t]
-
-        def _relevant(item: Item):
-            slug_score = 0
-            title_score = 0
-            if token_matches_slug(item.slug, search):
-                slug_score += 2
-            if q in item.title.lower():
-                title_score += 1
-                for qt in q_tokens:
-                    if qt in item.title.lower():
-                        title_score += 1
-                        break
-            tokens = slug_tokens(item.slug)
-            normalized = [DEVICE_PREFIXES.get(t, t) for t in tokens]
-            for qt in q_tokens:
-                nqt = DEVICE_PREFIXES.get(qt, qt)
-                if any(nqt == t or t.startswith(nqt) or nqt.startswith(t) for t in normalized):
-                    slug_score += 1
-            return slug_score + title_score
-
-        ranked = sorted(items, key=lambda i: -_relevant(i))
-        items = [r for r in ranked if _relevant(r) > 0 or q in r.title.lower()]
+    markup_map = build_markup_map(items, session)
 
     results = []
+    filtered_items = []
     for item in items:
-        price_final = get_price_final(item, session)
+        if q and not matches_slug_query(item.slug, search) and q not in item.title.lower():
+            continue
+        filtered_items.append(item)
+
+    if q:
+        filtered_items.sort(key=lambda i: -_slug_search_score(i.slug, search))
+
+    for item in filtered_items:
+        price_final = get_price_final_bulk(item, markup_map)
         results.append(ItemPublic(
             id=str(item.id),
             uid=item.uid,
@@ -88,8 +128,10 @@ def list_items(
             currency=item.currency,
             delivery_time=item.delivery_time,
             stock=item.stock,
+            meta=item.meta,
         ))
-    return results
+
+    return {"items": results, "total": total, "page": page, "limit": limit}
 
 
 @router.get("/items/{slug}", response_model=ItemDetail)
@@ -100,16 +142,8 @@ def get_item(slug: str, session = Depends(get_session)):
     
     price_final = get_price_final(item, session)
     active_listings = [pl for pl in item.provider_listings if pl.is_active and pl.provider and pl.provider.is_active]
-    thumbnail_url = item.thumbnail or ""
-    media_url = None
-    if thumbnail_url:
-        if thumbnail_url.startswith("http"):
-            media_url = thumbnail_url
-        elif thumbnail_url.startswith("/"):
-            media_url = thumbnail_url
-        else:
-            media_url = f"{settings.MEDIA_PUBLIC_URL}/{thumbnail_url.lstrip('/')}"
-    
+    media_url = resolve_media_url(item.thumbnail)
+
     return ItemDetail(
         id=str(item.id),
         uid=item.uid,
@@ -134,10 +168,11 @@ def get_item(slug: str, session = Depends(get_session)):
             }
             for listing in active_listings
         ],
+        meta=item.meta,
     )
 
 
-@router.get("/banners", response_model=List[dict])
+@router.get("/banners", response_model=List[BannerPublic])
 def list_active_banners(session=Depends(get_session)):
     now = datetime.now(timezone.utc)
     stmt = select(Banner).where(Banner.is_active == True)
@@ -149,13 +184,16 @@ def list_active_banners(session=Depends(get_session)):
             continue
         if b.ends_at and b.ends_at < now:
             continue
-        active_banners.append({
-            "id": str(b.id),
-            "title": b.title,
-            "content": b.content,
-            "image_url": b.image_url,
-            "link_url": b.link_url,
-            "is_dismissible": b.is_dismissible,
-        })
+        active_banners.append(BannerPublic(
+            id=str(b.id),
+            slug=b.slug,
+            title=b.title,
+            content=b.content,
+            image_url=resolve_media_url(b.image_url),
+            link_url=b.link_url,
+            is_dismissible=b.is_dismissible,
+            starts_at=b.starts_at,
+            ends_at=b.ends_at,
+        ))
     
     return active_banners

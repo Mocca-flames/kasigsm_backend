@@ -114,7 +114,12 @@
       "price_final": "decimal",
       "currency": "string",
       "delivery_time": "string or null",
-      "stock": "int or null"
+      "stock": "int or null",
+      "meta": {
+        "display_title": "string or null",
+        "rent_duration": "string or null",
+        "rent_notes": ["string"]
+      } or null
     }
   ]
   ```
@@ -143,6 +148,43 @@
     "delivery_time": "string or null",
     "stock": "int or null",
     "is_visible": true,
+    "meta": {
+      "display_title": "string or null",
+      "rent_duration": "string or null",
+      "rent_notes": ["string"]
+    } or null
+  }
+  ```
+
+### Get Item Detail
+
+- **Endpoint:** `GET /items/{slug}`
+- **Method:** `GET`
+- **Auth:** Not required
+- **Path Parameters:**
+  - `slug` (string, required) — URL-friendly item slug
+- **Response (200 OK):**
+  ```json
+  {
+    "id": "uuid",
+    "uid": "string or null",
+    "slug": "string",
+    "title": "string",
+    "description": "string or null",
+    "item_type": "SERVICE|PRODUCT",
+    "category": "string",
+    "thumbnail": "string or null",
+    "media_url": "string or null",
+    "price_final": "decimal",
+    "currency": "string",
+    "delivery_time": "string or null",
+    "stock": "int or null",
+    "is_visible": true,
+    "meta": {
+      "display_title": "string or null",
+      "rent_duration": "string or null",
+      "rent_notes": ["string"]
+    } or null,
     "provider_listings": [
       {
         "provider": "string",
@@ -197,15 +239,19 @@
   [
     {
       "id": "uuid",
+      "slug": "string",
       "title": "string",
       "content": "string",
       "image_url": "string or null",
       "link_url": "string or null",
-      "is_dismissible": true
+      "is_dismissible": true,
+      "starts_at": "datetime or null",
+      "ends_at": "datetime or null"
     }
   ]
   ```
 - **Behavior:** Only banners with `is_active=true` whose `starts_at` is in the past (or unset) and `ends_at` is in the future (or unset) are returned. Banners with a past `ends_at` or a future `starts_at` are excluded.
+- **Recommended image dimensions:** `1920 x 600` px (landscape). Accepted formats: `png`, `jpg`, `jpeg`, `webp`, `gif`.
 
 ---
 

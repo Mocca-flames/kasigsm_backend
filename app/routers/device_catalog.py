@@ -9,12 +9,15 @@ from app.schemas.device_catalog import (
     DeviceScanResponse,
     RecommendationRequest,
     RecommendationResponse,
+    ScanServiceRequest,
+    ScanServiceResponse,
     IssueOut,
     ChipsetOut,
     DeviceBrandOut,
     ToolRecommendation,
 )
 from app.models.item import Item
+from app.services.pricing import get_price_final
 
 router = APIRouter()
 
@@ -84,30 +87,35 @@ def scan_device(payload: DeviceScanRequest, session=Depends(get_session)):
 
 @router.post("/device/recommend", response_model=RecommendationResponse)
 def recommend_tools(payload: RecommendationRequest, session=Depends(get_session)):
+    brand_slug = payload.brand_slug.lower().strip() if payload.brand_slug else None
+    chipset_key_raw = payload.chipset_key.strip() if payload.chipset_key and payload.chipset_key.strip() else None
+    if chipset_key_raw and not any(c.isalnum() for c in chipset_key_raw):
+        chipset_key_raw = None
+
     q_caps = select(Tool).join(ToolCapability, ToolCapability.tool_id == Tool.id).where(
         ToolCapability.issue_slug == payload.issue_slug,
         Tool.is_active == True,
         ToolCapability.is_active == True,
     )
 
-    if payload.brand_slug:
+    if brand_slug:
         q_caps = q_caps.join(DeviceCompatibility, DeviceCompatibility.tool_id == Tool.id).where(
             or_(
-                DeviceCompatibility.brand_slug == payload.brand_slug,
+                DeviceCompatibility.brand_slug == brand_slug,
                 DeviceCompatibility.brand_slug == None,  # noqa: E711
             ),
             DeviceCompatibility.is_active == True,
         )
 
-    if payload.chipset_key:
+    if chipset_key_raw:
         q_caps = q_caps.where(
             or_(
-                DeviceCompatibility.chipset_key == payload.chipset_key,
+                DeviceCompatibility.chipset_key == chipset_key_raw,
                 DeviceCompatibility.chipset_key == None,  # noqa: E711
             )
         )
 
-    tools = session.exec(q_caps.distinct().order_by(desc(Tool.id))).all()
+    tools = session.exec(q_caps.distinct().order_by(desc(Tool.id)).limit(3)).all()
 
     issue = session.exec(select(IssueCategory).where(IssueCategory.slug == payload.issue_slug)).first()
 
@@ -131,6 +139,100 @@ def recommend_tools(payload: RecommendationRequest, session=Depends(get_session)
         issue=IssueOut(slug=issue.slug, label=issue.label) if issue else IssueOut(slug=payload.issue_slug, label=payload.issue_slug),
         tools=tool_out,
     )
+
+
+@router.post("/device/recommend/services", response_model=ScanServiceResponse)
+def recommend_services(payload: ScanServiceRequest, session=Depends(get_session)):
+    if not payload.issues:
+        return ScanServiceResponse(services=[])
+
+    issue_slugs_set = {i.strip().lower() for i in payload.issues}
+    brand_slug = payload.brand_slug.lower().strip() if payload.brand_slug else None
+    chipset_key_raw = payload.chipset_key.strip() if payload.chipset_key and payload.chipset_key.strip() else None
+    if chipset_key_raw and not any(c.isalnum() for c in chipset_key_raw):
+        chipset_key_raw = None
+
+    q = select(Tool).join(ToolCapability, ToolCapability.tool_id == Tool.id).where(
+        ToolCapability.issue_slug.in_(issue_slugs_set),
+        Tool.is_active == True,
+        ToolCapability.is_active == True,
+    )
+
+    if brand_slug or chipset_key_raw:
+        q = q.join(DeviceCompatibility, DeviceCompatibility.tool_id == Tool.id).where(
+            DeviceCompatibility.is_active == True,
+        )
+
+    if brand_slug:
+        q = q.where(
+            or_(
+                DeviceCompatibility.brand_slug == brand_slug,
+                DeviceCompatibility.brand_slug == None,  # noqa: E711
+            )
+        )
+
+    if chipset_key_raw:
+        q = q.where(
+            or_(
+                DeviceCompatibility.chipset_key == chipset_key_raw,
+                DeviceCompatibility.chipset_key == None,  # noqa: E711
+            )
+        )
+
+    tools = session.exec(q.distinct().order_by(desc(Tool.id)).limit(min(payload.top + 10, 50))).all()
+
+    tool_out: list[ToolRecommendation] = []
+    seen_slugs = set()
+    for t in tools:
+        caps = session.exec(
+            select(ToolCapability).where(
+                ToolCapability.tool_id == t.id,
+                ToolCapability.issue_slug.in_(issue_slugs_set),
+            )
+        ).all()
+        matched_issues = {c.issue_slug for c in caps}
+        overlaps = matched_issues.intersection(issue_slugs_set)
+        if not overlaps:
+            continue
+
+        label = ", ".join(sorted(overlaps)).replace("_", " ").title()
+
+        rent_item = session.exec(
+            select(Item).where(Item.slug == t.slug, Item.is_archived == False, Item.is_visible == True).limit(1)
+        ).first()
+
+        rent_price = None
+        rent_currency = "ZAR"
+        if rent_item:
+            try:
+                rent_price = float(get_price_final(rent_item, session))
+                rent_currency = rent_item.currency or "ZAR"
+            except Exception:
+                rent_price = None
+
+        fake_multiplier = 6.0
+        fake_full_price = round(rent_price * fake_multiplier, 2) if rent_price is not None else None
+
+        tool_out.append(
+            ToolRecommendation(
+                slug=t.slug,
+                name=t.name,
+                description=t.description,
+                website_url=None,
+                reason=f"Bypass: {label}",
+                rent_slug=t.slug,
+                rent_price_final=rent_price,
+                rent_currency=rent_currency,
+                full_slug=t.slug,
+                full_price_final=fake_full_price,
+                full_currency=rent_currency,
+            )
+        )
+
+        if len(tool_out) >= min(payload.top, 20):
+            break
+
+    return ScanServiceResponse(services=tool_out)
 
 
 @router.get("/tools")

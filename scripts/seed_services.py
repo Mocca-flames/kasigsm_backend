@@ -26,6 +26,60 @@ def slugify(text: str) -> str:
     return text.strip("-")
 
 
+EMOJI_RE = re.compile(
+    "["
+    "\U0001F600-\U0001F64F"
+    "\U0001F300-\U0001F5FF"
+    "\U0001F680-\U0001F6FF"
+    "\U0001F1E0-\U0001F1FF"
+    "\U00002700-\U000027BF"
+    "\U0001F900-\U0001F9FF"
+    "\U00002600-\U000026FF"
+    "\U00002702-\U000027B0"
+    "]+",
+    flags=re.UNICODE,
+)
+SYMBOL_RE = re.compile(r"[\u26a0-\u26ff\ufe0f]+")
+
+
+def extract_service_meta(title: str):
+    clean = title
+    duration = None
+    notes = []
+
+    dur_match = re.search(r"[\[\({]?\s*(\d+)\s*(Hours?|Miniutes|Minutes?|Days?)\s*[\]\)}]?", clean, re.IGNORECASE)
+    if dur_match:
+        duration = f"{dur_match.group(1)} {dur_match.group(2).lower()}"
+        clean = clean[: dur_match.start()] + clean[dur_match.end():]
+    else:
+        for token in ("instant",):
+            if re.search(rf"\b{re.escape(token)}\b", clean, re.IGNORECASE):
+                duration = token.title()
+                clean = re.sub(rf"\b{re.escape(token)}\b", "", clean, flags=re.IGNORECASE)
+                break
+
+    clean = re.sub(r"\{?\s*Time:\s*\}?\s*", "", clean, flags=re.IGNORECASE)
+    parens = re.findall(r"\(([^)]+)\)", clean)
+    for p in parens:
+        text = EMOJI_RE.sub("", p)
+        text = SYMBOL_RE.sub("", text)
+        text = re.sub(r"\{?\s*Time:\s*\}?\s*", "", text, flags=re.IGNORECASE).strip()
+        if text:
+            notes.append(text)
+        clean = clean.replace(f"({p})", "", 1)
+
+    clean = EMOJI_RE.sub("", clean)
+    clean = SYMBOL_RE.sub("", clean)
+    clean = re.sub(r"\s+", " ", clean).strip(" -:[]{}")
+    if not clean:
+        clean = title.strip()
+
+    display_title = clean
+    notes = notes or []
+
+    return display_title, duration, notes
+
+
 def make_uid(session, supplier_name: str, service_type: str) -> str:
     prefix = f"{supplier_name[:3].upper()}-{service_type[:3].upper()}"
     existing = session.exec(
@@ -115,6 +169,8 @@ def seed_services(file_path: str, provider_name: str = None) -> None:
             delivery_time = delivery_time.replace("Miniutes", "Minutes")
         thumbnail = svc.get("thumbnail")
 
+        display_title, rent_duration, rent_notes = extract_service_meta(title)
+
         cost_price_zar = normalized_price * rate if currency == "USD" else normalized_price
 
         slug = slugify(title)
@@ -125,13 +181,41 @@ def seed_services(file_path: str, provider_name: str = None) -> None:
             if delivery_time is not None:
                 item.delivery_time = delivery_time
             if thumbnail:
-                item.thumbnail = thumbnail
+                existing_is_local = (
+                    item.thumbnail
+                    and item.thumbnail.startswith(settings.MEDIA_PUBLIC_URL)
+                )
+                if not existing_is_local:
+                    item.thumbnail = thumbnail
             item.currency = currency
+            if default_service_type == "Tool Rental":
+                meta = dict(item.meta or {})
+                if display_title and display_title != title:
+                    meta["display_title"] = display_title
+                else:
+                    meta.pop("display_title", None)
+                if rent_duration:
+                    meta["rent_duration"] = rent_duration
+                else:
+                    meta.pop("rent_duration", None)
+                if rent_notes:
+                    meta["rent_notes"] = rent_notes
+                else:
+                    meta.pop("rent_notes", None)
+                item.meta = meta or None
             session.add(item)
             session.commit()
             session.refresh(item)
         else:
             uid = make_uid(session, default_supplier, default_service_type)
+            meta = {}
+            if default_service_type == "Tool Rental":
+                if display_title:
+                    meta["display_title"] = display_title
+                if rent_duration:
+                    meta["rent_duration"] = rent_duration
+                if rent_notes:
+                    meta["rent_notes"] = rent_notes
             item = Item(
                 uid=uid,
                 slug=slug,
@@ -143,6 +227,7 @@ def seed_services(file_path: str, provider_name: str = None) -> None:
                 price=normalized_price,
                 delivery_time=delivery_time,
                 thumbnail=thumbnail,
+                meta=meta or None,
             )
             session.add(item)
             session.commit()

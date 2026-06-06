@@ -20,9 +20,12 @@ def get_current_user(
         email = payload.get("sub")
         if not email:
             raise HTTPException(status_code=403, detail="Invalid token")
+        reset_claim = payload.get("reset")
         user = session.exec(select(User).where(User.email == email)).first()
         if not user:
             raise HTTPException(status_code=403, detail="User not found")
+        if reset_claim is not None and int(reset_claim) != int(user.password_reset_at.timestamp()):
+            raise HTTPException(status_code=403, detail="Session invalidated. Please log in again.")
         return user
     except JWTError:
         raise HTTPException(status_code=403, detail="Invalid token")

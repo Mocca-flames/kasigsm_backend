@@ -50,7 +50,7 @@ def approve_top_up(session, top_up: WalletTopUp, admin_note: str | None = None):
         if user and user.email:
             send_wallet_topup_approved_email(user.email, float(top_up.amount), float(wallet.balance), top_up.reference)
 
-    if wallet.balance <= settings.WALLET_LOW_BALANCE_THRESHOLD:
+    if wallet.balance <= settings.wallet_low_balance_threshold:
         if user and user.email:
             send_wallet_low_balance_email(user.email, float(wallet.balance))
 

@@ -49,8 +49,8 @@ def get_or_create_wallet(session, user_id, auto_disable_expired=True):
 def _is_wallet_expired(wallet: Wallet) -> bool:
     if not wallet.updated_at:
         return False
-    if not settings.WALLET_EXPIRY_DAYS:
+    if not settings.wallet_expiry_days:
         return False
     now = datetime.now(timezone.utc)
     delta = now - wallet.updated_at
-    return delta.days >= settings.WALLET_EXPIRY_DAYS
+    return delta.days >= settings.wallet_expiry_days

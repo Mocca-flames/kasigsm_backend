@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum as PyEnum
 from typing import Optional
-from sqlmodel import Field, Relationship, SQLModel, Column, JSON, String, Enum as SAEnum, DateTime, Text
+from sqlmodel import Field, Relationship, SQLModel, Column, JSON, String, Enum as SAEnum, DateTime, Text, Index
 
 
 class ItemType(str, PyEnum):
@@ -34,6 +34,10 @@ class Item(SQLModel, table=True):
         sa_column=Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     )
 
+    __table_args__ = (
+        Index("ix_item_visibility_category", "is_visible", "is_archived", "item_type", "category"),
+    )
+
     provider_listings: list["ProviderListing"] = Relationship(back_populates="item")
     order_items: list["OrderItem"] = Relationship(back_populates="item")
     credentials: list["Credential"] = Relationship(back_populates="item")
@@ -61,6 +65,11 @@ class ProviderListing(SQLModel, table=True):
     cost_price: Decimal = Field(max_digits=12, decimal_places=2, nullable=False)
     is_preferred: bool = Field(default=False)
     is_active: bool = Field(default=True)
+
+    __table_args__ = (
+        Index("ix_providerlisting_item", "item_id", "is_active"),
+        Index("ix_providerlisting_provider", "provider_id", "is_active"),
+    )
 
     item: Item = Relationship(back_populates="provider_listings")
     provider: Provider = Relationship(back_populates="listings")

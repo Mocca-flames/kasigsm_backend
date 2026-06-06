@@ -20,6 +20,9 @@ class User(SQLModel, table=True):
     )
     client_ref: Optional[str] = Field(sa_type=String(6), default=None, unique=True, index=True)
     is_active: bool = Field(default=True)
+    password_reset_at: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    )
     created_at: datetime = Field(
         sa_column=Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     )

@@ -39,7 +39,7 @@ def get_my_wallet(user = Depends(get_current_user), session = Depends(get_sessio
         balance=wallet.balance,
         status=wallet.status.value,
         client_ref=wallet.client_ref,
-        is_low_balance=bool(wallet.balance <= settings.WALLET_LOW_BALANCE_THRESHOLD),
+        is_low_balance=bool(wallet.balance <= settings.wallet_low_balance_threshold),
     )
 
 
@@ -49,12 +49,12 @@ def create_top_up(top_up_in: WalletTopUpRequest, user = Depends(get_current_user
         raise HTTPException(status_code=403, detail="Not authenticated")
 
     amount = top_up_in.amount
-    if amount % settings.WALLET_TOPUP_STEP != 0:
-        raise HTTPException(status_code=400, detail=f"Amount must be a multiple of {settings.WALLET_TOPUP_STEP}")
-    if amount < settings.WALLET_TOPUP_MIN or amount > settings.WALLET_TOPUP_MAX:
+    if amount % settings.wallet_topup_step != 0:
+        raise HTTPException(status_code=400, detail=f"Amount must be a multiple of {settings.wallet_topup_step}")
+    if amount < settings.wallet_topup_min or amount > settings.wallet_topup_max:
         raise HTTPException(
             status_code=400,
-            detail=f"Amount must be between {settings.WALLET_TOPUP_MIN} and {settings.WALLET_TOPUP_MAX}",
+            detail=f"Amount must be between {settings.wallet_topup_min} and {settings.wallet_topup_max}",
         )
 
     wallet = get_or_create_wallet(session, user.id)
