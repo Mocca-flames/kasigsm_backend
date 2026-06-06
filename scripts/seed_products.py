@@ -28,6 +28,7 @@ def seed_products(file_path: str, provider_name: str) -> None:
         if not item:
             item = Item(
                 slug=prod["slug"],
+                uid=prod["slug"],
                 title=prod["title"],
                 description=prod.get("description"),
                 item_type=ItemType.PRODUCT,
