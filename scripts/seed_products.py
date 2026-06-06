@@ -33,6 +33,7 @@ def seed_products(file_path: str, provider_name: str) -> None:
                 description=prod.get("description"),
                 item_type=ItemType.PRODUCT,
                 category=prod.get("category", "Remote Services" if "remote" in file_path else "Tool Rental"),
+                thumbnail=prod.get("thumbnail"),
                 stock=prod.get("stock", 0),
                 is_visible=True,
             )
