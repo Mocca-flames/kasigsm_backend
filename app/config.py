@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     PAYSTACK_SECRET_KEY: str = "sk_test_566a7b362057bc2ca80df97ec482290d60180ea4"
     PAYSTACK_PUBLIC_KEY: str = "pk_test_eb846621ad62bc7df0027794c88969c04f075b06"
     PAYSTACK_BASE_URL: str = "https://api.paystack.co"
-    PAYSTACK_CALLBACK_URL: str = "http://localhost:3000/payment/callback"
+    PAYSTACK_CALLBACK_URL: str = "http://api.kasigsm.co.za:8000/payment/callback"
     PAYFAST_MERCHANT_ID: str = ""
     PAYFAST_MERCHANT_KEY: str = ""
     USD_TO_ZAR_RATE: float = 16.5
@@ -21,11 +21,9 @@ class Settings(BaseSettings):
     ALLOWED_EXTENSIONS: set[str] = {"png", "jpg", "jpeg", "webp", "gif"}
     CORS_ALLOW_ALL: bool = False
     CORS_ORIGINS: list[str] = [
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://localhost:5174",
+        "http://api.kasigsm.co.za:8000",
     ]
-    FRONTEND_URL: str = "http://localhost:5173"
+    FRONTEND_URL: str = "http://api.kasigsm.co.za:8000"
     MAX_UPLOAD_BYTES: int = 5 * 1024 * 1024
     brevo_smtp_host: str = "smtp-relay.brevo.com"
     brevo_smtp_port: int = 587
