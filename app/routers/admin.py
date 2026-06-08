@@ -11,6 +11,7 @@ import io
 import re
 from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel
+from app.config import settings
 from app.database import get_session
 from app.models.item import Item, ItemType, Provider, ProviderListing
 from app.models.user import User, UserRole
