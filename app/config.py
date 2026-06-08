@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = [
         "http://api.kasigsm.co.za:8000",
     ]
+    CORS_ORIGIN_REGEX: str = r"^https://(.+\.)?kasigsm\.co\.za$"
     FRONTEND_URL: str = "http://api.kasigsm.co.za:8000"
     MAX_UPLOAD_BYTES: int = 5 * 1024 * 1024
     brevo_smtp_host: str = "smtp-relay.brevo.com"

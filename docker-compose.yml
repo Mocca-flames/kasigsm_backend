@@ -8,6 +8,8 @@ services:
       - PYTHONPATH=/app
       - MEDIA_ROOT=/app/media
       - MEDIA_BASE_URL=https://api.kasigsm.co.za
+      - CORS_ALLOW_ALL=false
+      - CORS_ORIGIN_REGEX=^https://(.+\.)?kasigsm\.co\.za$
     depends_on:
       db:
         condition: service_healthy
