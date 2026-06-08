@@ -15,22 +15,9 @@ from app.services.promo import validate_promo_code, apply_promo_code, PromoValid
 from app.utils.security import get_current_user
 from app.config import settings
 from app.utils.slug import token_matches_slug, slug_tokens
+from app.utils.encryption import decrypt_payload
 
 router = APIRouter()
-
-
-def decrypt_payload(encrypted: str) -> str:
-    from Crypto.Cipher import AES
-    from Crypto.Util.Padding import unpad
-    import binascii
-    
-    key = bytes.fromhex(settings.ENCRYPTION_KEY)
-    iv = binascii.unhexlify(encrypted[:32])
-    ciphertext = binascii.unhexlify(encrypted[32:])
-    
-    cipher = AES.new(key, AES.MODE_CBC, iv)
-    decrypted = unpad(cipher.decrypt(ciphertext), AES.block_size)
-    return decrypted.decode()
 
 
 @router.post("/orders", response_model=OrderPublic)
