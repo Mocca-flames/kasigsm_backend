@@ -7,6 +7,7 @@ services:
       - DATABASE_URL=postgresql://kasi:kasi@db:5432/kasigsm
       - PYTHONPATH=/app
       - MEDIA_ROOT=/app/media
+      - MEDIA_BASE_URL=https://api.kasigsm.co.za
     depends_on:
       db:
         condition: service_healthy

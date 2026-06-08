@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     USD_TO_ZAR_RATE: float = 16.5
     MEDIA_ROOT: str = "media"
     MEDIA_PUBLIC_URL: str = "/media"
+    MEDIA_BASE_URL: str = "https://api.kasigsm.co.za"
     CLOUDFLARE_API_TOKEN: str = ""
     CLOUDFLARE_ACCOUNT_TAG: str = ""
     CLOUDFLARE_ANALYTICS_DOMAIN: str = "kasigsm.co.za"

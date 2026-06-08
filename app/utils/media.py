@@ -7,6 +7,5 @@ def resolve_media_url(thumbnail: Optional[str]) -> Optional[str]:
         return None
     if thumbnail.startswith("http"):
         return thumbnail
-    if thumbnail.startswith(settings.MEDIA_PUBLIC_URL):
-        return thumbnail
-    return f"{settings.MEDIA_PUBLIC_URL}/{thumbnail.lstrip('/')}"
+    base = settings.MEDIA_BASE_URL.rstrip("/")
+    return f"{base}/{thumbnail.lstrip('/')}"
