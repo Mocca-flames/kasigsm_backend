@@ -6,11 +6,13 @@ services:
     environment:
       - DATABASE_URL=postgresql://kasi:kasi@db:5432/kasigsm
       - PYTHONPATH=/app
+      - MEDIA_ROOT=/app/media
     depends_on:
       db:
         condition: service_healthy
     volumes:
       - .:/app
+      - media_data:/app/media
     command: bash /app/entrypoint.sh
 
   db:
@@ -47,3 +49,4 @@ services:
 
 volumes:
   pgdata:
+  media_data:

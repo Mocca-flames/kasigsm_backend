@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -5,6 +6,8 @@ from fastapi.staticfiles import StaticFiles
 from app.utils.security import get_current_user, require_admin
 from app.routers import public, auth, admin, client, payments, search, technician, wallet, analytics, promo, device_catalog
 from app.config import settings
+
+os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
 
 app = FastAPI(title="KasI GSM API", version="0.1.0")
 
